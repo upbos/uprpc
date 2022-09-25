@@ -1,0 +1,46 @@
+@import '~antd/es/style/variable.less';
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+
+.ant-tabs > .ant-tabs-content-holder > .ant-tabs-content > {
+  height: 100%;
+
+  .ant-tabs-tabpane {
+    height: 100%;
+    overflow: auto;
+  }
+}
+
+.ant-tabs > .ant-tabs-content-holder > .ant-tabs-content-left > {
+  .ant-tabs-tabpane {
+    padding: 0px;
+  }
+}
+
+.ant-tabs-nav-list > .ant-tabs-tab {
+  padding: 10px !important;
+}
+
+:root {
+  --separator-border: #f0f0f0;
+  --focus-border: #fa541c;
+  --sash-hover-size: 2px;
+}
+
+
+// 折叠面板header高度
+.ant-collapse > .ant-collapse-item > .ant-collapse-header {
+  padding: 3px 8px;
+}

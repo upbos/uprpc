@@ -1,0 +1,10 @@
+{
+  "name": "uprpc-go",
+  "outputfilename": "uprpc",
+  "wailsjsdir": "../uprpc-web/src",
+  "frontend:dev:serverUrl": "http://localhost:8000",
+  "author": {
+    "name": "Jason Wang",
+    "email": "wjzchina2008@126.com"
+  }
+}

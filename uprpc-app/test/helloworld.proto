@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+// option java_package = "ex.grpc";
+// option objc_class_prefix = "HSW";
+
+package helloworld;
+
+service Greeter {
+  // 简单gRPC调用
+  rpc sayHelloSimple (HelloRequest) returns (HelloReply) {}
+  // 简单gRPC调用
+  rpc sayHelloSimpleError (HelloRequest) returns (HelloReply) {}
+  // 服务端流式调用
+  rpc sayHelloServer (HelloRequest) returns (stream HelloReply) {}
+  // 客户端流式调用
+  rpc sayHelloClient (stream HelloRequest) returns (HelloReply) {}
+  // 客户端服务端双向流
+  rpc sayHelloDouble (stream HelloRequest) returns (stream HelloReply) {}
+}
+
+
+enum PhoneType //枚举消息类型
+{
+  MOBILE = 0; //proto3版本中，首成员必须为0，成员不应有相同的值
+  HOME = 1;
+  WORK = 2;
+}
+
+message PhoneNumber {
+  string number = 1;
+  PhoneType type = 2;
+}
+
+
+message HelloRequest {
+  string name = 1;
+  PhoneNumber phone = 2;
+  map<int32,string> data = 3;
+}
+
+message HelloReply {
+  string message = 1;
+}

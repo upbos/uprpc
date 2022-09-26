@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+// option java_package = "ex.grpc";
+// option objc_class_prefix = "HSW";
+
+package helloworld;
+
+service Greeter {
+  // 简单gRPC调用
+  rpc sayHelloSimple (HelloRequest) returns (HelloReply) {}
+  // 简单gRPC调用
+  rpc sayHelloSimpleError (HelloRequest) returns (HelloReply) {}
+  // 服务端流式调用
+  rpc sayHelloServer (HelloRequest) returns (stream HelloReply) {}
+  // 客户端流式调用
+  rpc sayHelloClient (stream HelloRequest) returns (HelloReply) {}
+  // 客户端服务端双向流
+  rpc sayHelloDouble (stream HelloRequest) returns (stream HelloReply) {}
+}
+
+
+
+
+
+
+
+
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}

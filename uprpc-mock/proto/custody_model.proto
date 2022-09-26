@@ -1,0 +1,448 @@
+// Copyright 2021 Victory Fintech Co. Ltd.
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.vdx.ams.custody.api";
+option go_package = "public/domain/ams";
+
+package custody;
+
+import "base.proto";
+
+message CreateAccountRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  // account type: CONTRA=1, HOUSE=2, CLIENT_FUNDING=3, CLIENT_TRADING=4
+  int32 account_type = 3;
+  int32 business_type = 4;
+  int64 parent_id = 5;
+  string alias = 6;
+}
+
+message CreateAccountReply {
+  int64 account_id = 1;
+  // status: NORMAL=1, LOCKED=2, DELETED=3
+  int32 status = 2;
+  int64 update_time = 3;
+}
+
+message UpdateAccountRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int64 account_id = 3;
+  string remark = 4;
+  string alias = 5;
+}
+
+message UpdateAccountReply {
+  int64 account_id = 1;
+  // status: NORMAL=1, LOCKED=2
+  int32 status = 2;
+  int64 update_time = 3;
+}
+
+message DeleteAccountRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int64 account_id = 3;
+}
+
+message GrantPermissionRequest {
+  int64 owner_id = 1;
+  int64 admin_user_id = 2;
+  int64 grant_user_id = 3;
+  int64 grant_account_id = 4;
+  repeated string permissions = 5;
+}
+
+message ListAccountsRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  // optional, account type: CONTRA=1, HOUSE=2, CLIENT_FUNDING=3, CLIENT_TRADING=4
+  int32 account_type = 3;
+}
+
+message Account {
+  int64 account_id = 1;
+  // account type: CONTRA=1, HOUSE=2, CLIENT_FUNDING=3, CLIENT_TRADING=4
+  int32 account_type = 2;
+  // business type: DEFAULT=1, FEE=2, ACTIVITY=3
+  int32 business_type = 3;
+  int64 owner_id = 4;
+  // status: NORMAL=1, LOCKED=2
+  int32 status = 5;
+  // category: MAIN_ACCT=1, SUB_ACCT=2
+  int32 category = 6;
+  string alias = 7;
+  // permissions
+  repeated string permissions = 8;
+  int64 update_time = 9;
+}
+
+message ListAccountsReply {
+  repeated Account accounts = 1;
+}
+
+message GetAccountBalanceRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int32 account_type = 3;
+  // optional
+  int64 account_id = 4;
+  // optional, since service will given default currency
+  repeated int32 currency_ids = 5;
+}
+
+message AccountBalance {
+  int32 currency_id = 1;
+  base.Decimal total = 2;
+  base.Decimal available = 3;
+}
+
+message GetAccountBalanceReply {
+  repeated AccountBalance balances = 1;
+}
+
+message ListAssetsRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int64 account_id = 3;
+  repeated int32 currency_ids = 4;
+  bool ignore_small = 5;
+}
+
+message Asset {
+  int32 currency_id = 1;
+  base.Decimal total = 2;
+  base.Decimal available = 3;
+  base.Decimal frozen = 4;
+  int64 update_time = 5;
+}
+
+message ListAssetsReply {
+  repeated Asset assets = 1;
+}
+
+message DepositAssetRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int64 account_id = 3;
+  int32 currency_id = 4;
+  base.Decimal amount = 5;
+}
+
+// deposit & withdraw
+message ListCurrencyChainsRequest {
+  int64 user_id = 1;
+  int32 currency_id = 2;
+  int32 type = 3; // 1-for deposit 2-for withdraw
+}
+
+message ListCurrencyChainsReply {
+  repeated CurrencyChain chains = 1;
+}
+
+message CurrencyChain {
+  int32 currency_id = 1;
+  int32 chain_id = 2;
+  string chain_name = 3;
+  string alias = 4;
+  base.Decimal deposit_min_size = 5;
+  base.Decimal withdraw_min_size = 6;
+  base.Decimal withdraw_fee = 7;
+  bool required_tag = 8;
+  string address_expression = 9;
+  int32 min_confirmations = 10;
+  string icon_url = 11;
+  int32 state = 12;
+  int64 update_time = 13;
+}
+
+message RequestDepositRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int32 currency_id = 3;
+  int32 chain_id = 4;
+  base.Decimal amount = 5;
+  int32 source_type = 6;
+  string source_address = 7;
+}
+
+message RequestDepositReply {
+  int64 id = 1;
+  int32 state = 2;
+  int64 create_time = 3;
+}
+
+message ListDepositRequestsRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int32 currency_id = 3;
+  int32 chain_id = 4;
+  int32 state = 5;
+  int64 start_time = 6; // Query start time
+  int64 end_time = 7; // Query end time
+  int64 before = 8; // Query data whose ID is less than this value
+  int64 after = 9; // Query data whose ID is grater than this value
+  int32 limit = 10;
+}
+message ListDepositRequestReply {
+  repeated DepositRequest requests = 1;
+}
+
+message DepositRequest {
+  int64 id = 1;
+  int64 owner_id = 2;
+  int64 user_id = 3;
+  int32 currency_id = 4;
+  int32 chain_id = 5;
+  string chain_name = 6;
+  base.Decimal requestAmount = 7;
+  int32 request_source_type = 8;
+  string request_source_address = 9;
+  string request_source_tag = 10;
+  int32 state = 11;
+  int32 reason = 12;
+  string source_address = 13;
+  string source_tag = 14;
+  string destination_address = 15;
+  string destination_tag = 16;
+  base.Decimal receivedAmount = 17;
+  string txid = 18;
+  int64 deposit_id = 19;
+  int64 confirmed_time = 20;
+  int64 create_time = 21;
+  int64 update_time = 22;
+}
+
+message GetDepositAddressRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int32 currency_id = 3;
+  int32 chain_id = 4;
+}
+
+message GetDepositAddressReply {
+  string address = 1;
+  string tag = 2;
+  base.Decimal deposit_min_size = 3;
+  int32 min_confirmations = 4;
+}
+
+message ListDepositsRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int32 currency_id = 3;
+  int32 chain_id = 4;
+  int32 state = 5;
+  int64 start_time = 6; // Query start time
+  int64 end_time = 7; // Query end time
+  int64 before = 8; // Query data whose ID is less than this value
+  int64 after = 9; // Query data whose ID is grater than this value
+  int32 limit = 10;
+}
+message ListDepositsReply {
+  repeated Deposit deposits = 1;
+}
+message Deposit {
+  int64 id = 1;
+  int64 owner_id = 2;
+  int64 user_id = 3;
+  int32 currency_id = 4;
+  int32 chain_id = 5;
+  string chain_name = 6;
+  int64 account_id = 7;
+  base.Decimal amount = 8;
+  string source_address = 9;
+  string source_tag = 10;
+  string destination_address = 11;
+  string destination_tag = 12;
+  int32 confirmations = 13;
+  int32 state = 14;
+  int32 reason = 15;
+  string txid = 16;
+  int64 received_time = 17;
+  int64 confirm_time = 18;
+  int64 create_time = 19;
+  int64 update_time = 20;
+}
+
+message CreateWithdrawRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int32 currency_id = 3;
+  int32 chain_id = 4;
+  string ip = 5;
+  base.Decimal amount = 6;
+  string address = 7;
+  string tag = 8;
+}
+
+message CreateWithdrawReply {
+  int64 id = 1;
+  int32 state = 2;
+  int64 create_time = 4;
+}
+
+message ListWithdrawsRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int32 currency_id = 3;
+  int32 chain_id = 4;
+  int32 state = 5;
+  int64 start_time = 6; // Query start time
+  int64 end_time = 7; // Query end time
+  int64 before = 8; // Query data whose ID is less than this value
+  int64 after = 9; // Query data whose ID is grater than this value
+  int32 limit = 10;
+}
+message ListWithdrawReply {
+  repeated Withdraw withdraws = 1;
+}
+
+message Withdraw {
+  int64 id = 1;
+  int64 owner_id = 2;
+  int64 user_id = 3;
+  int32 currency_id = 4;
+  int32 chain_id = 5;
+  string chain_name = 6;
+  int64 account_id = 7;
+  base.Decimal amount = 8;
+  string destination_address = 9;
+  string destination_tag = 10;
+  int32 confirmations = 11;
+  string ip = 12;
+  base.Decimal fee = 13;
+  int32 state = 14;
+  int32 reason = 15;
+  string txid = 16;
+  int64 create_time = 17;
+  int64 update_time = 18;
+}
+message ListVaspRequest {
+  int32 type = 1;
+}
+message ListVaspReply {
+  repeated Vasp vasps = 1;
+}
+
+message Vasp {
+  int32 id = 1;
+  int32 type = 2;
+  string name = 3;
+  string description = 4;
+  int32 state = 5;
+  int64 create_time = 12;
+}
+
+message ListWhiteAddressesRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int32 currency_id = 3;
+  int32 chain_id = 4;
+  int32 favored = 5;
+  string address = 6;
+  int64 start_time = 7; // Query start time
+  int64 end_time = 8; // Query end time
+  int64 before = 9; // Query data whose ID is less than this value
+  int64 after = 10; // Query data whose ID is grater than this value
+  int32 limit = 11;
+}
+message ListWhiteAddressesReply {
+  repeated WhiteAddress whitelist = 1;
+}
+
+message WhiteAddress {
+  int64 id = 1;
+  int64 owner_id = 2;
+  int64 user_id = 3;
+  int32 chain_id = 4;
+  string chain_name = 5;
+  int32 currency_id = 6;
+  string address = 7;
+  string tag = 8;
+  string label = 9;
+  bool favored = 10;
+  int64 create_time = 11;
+  int64 update_time = 12;
+}
+
+message SaveWhiteAddressRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int32 currency_id = 3;
+  int32 chain_id = 4;
+  string address = 5;
+  string tag = 6;
+  string label = 7;
+  bool favored = 8;
+}
+
+message RemoveWhiteAddressRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int32 address_id = 3;
+}
+
+message FavorWhiteAddressRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int32 address_id = 3;
+}
+
+
+message TransferRequest {
+  int64 from_owner_id = 1;
+  int64 from_user_id = 2;
+  int32 from_account_type = 3;
+  int64 from_account_id = 4;
+  int64 to_owner_id = 5;
+  int64 to_user_id = 6;
+  int32 to_account_type = 7;
+  int64 to_account_id = 8;
+  int32 currency_id = 9;
+  base.Decimal amount = 10;
+}
+
+message TransferReply {
+  int64 transfer_id = 1;
+  int32 state = 2;
+  int64 update_time = 3;
+}
+
+message ListTransferRequest {
+  int64 owner_id = 1;
+  int64 user_id = 2;
+  int32 from_account_type = 3;
+  int64 from_account_id = 4;
+  int32 to_account_type = 5;
+  int64 to_account_id = 6;
+  int32 currency_id = 7;
+  int32 type = 8;
+  int32 state = 9; //  transfer state: 1-submit 2-completed 3-failed
+  int64 start_time = 10; // Query start time
+  int64 end_time = 11; // Query end time
+  int64 before = 12; // Query data whose ID is less than this value
+  int64 after = 13; // Query data whose ID is grater than this value
+  int32 limit = 14;
+}
+
+message ListTransferReply {
+  repeated TransferInfo transfers = 1;
+}
+
+message TransferInfo {
+  int64 transfer_id = 1;
+  int32 from_account_type = 3;
+  int64 from_account_id = 4;
+  int32 to_account_type = 5;
+  int64 to_account_id = 6;
+  int32 currency_id = 7;
+  base.Decimal amount = 8;
+  int32 type = 9;
+  int32 state = 11; // transfer state: 1-submit 2-completed 3-failed
+  int64 create_time = 12;
+  int64 update_time = 13;
+  int32 reason = 14;
+}

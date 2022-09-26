@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+// option java_package = "com.upbos.user";
+
+package user.center;
+
+message SecurityKey {
+  string type = 1;
+  string key  = 2;
+  string desc = 3;
+}
+
+enum PhoneType {
+  MOBILE = 0;
+  HOME   = 1;
+  WORK   = 2;
+}
+
+message PhoneNumber {
+  PhoneType type   = 1;
+  string    number = 2;
+}
+
+message User {
+  int64                    user_id      = 1;
+  string                   name         = 2;
+  repeated PhoneNumber     phones       = 3;
+  map<string, SecurityKey> securityKeys = 4;
+}
+
+message SaveUserRequest {
+  string operator   = 1;
+  int64  createTime = 2;
+  User   user       = 3;
+}
+
+message SaveUserReply {
+  int64 user_id = 1;
+}
+
+message ListUserRequest {
+  string user_name = 1;
+  string sex       = 2;
+}
+
+message ListUserReply {
+  repeated User users = 1;
+}
+
+
+service UserService {
+
+  // get user
+  rpc saveUser(SaveUserRequest) returns(stream SaveUserReply);
+  // query user list
+  rpc listUser (ListUserRequest) returns (ListUserReply);
+}
+
+

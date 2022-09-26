@@ -103,8 +103,6 @@ func parseMethod(services []*desc.ServiceDescriptor) []*Method {
 				Name:             method.GetName(),
 				Mode:             b2i[method.IsServerStreaming()]<<1 | b2i[method.IsClientStreaming()],
 				RequestBody:      string(str),
-				RequestMds:       nil,
-				ResponseMds:      nil,
 			}
 			methods = append(methods, m)
 		}
@@ -125,10 +123,6 @@ func parseMessageFields(messageDesc *desc.MessageDescriptor) interface{} {
 }
 
 func parseField(field *desc.FieldDescriptor) interface{} {
-	if field.GetOneOf() != nil {
-		return parseField(field.GetOneOf().GetChoices()[0])
-	}
-
 	if field.IsMap() {
 		var v interface{}
 		if field.GetMapValueType().GetType() == dpb.FieldDescriptorProto_TYPE_MESSAGE {
@@ -141,6 +135,10 @@ func parseField(field *desc.FieldDescriptor) interface{} {
 		} else {
 			return map[int]interface{}{32: v}
 		}
+	}
+
+	if field.GetOneOf() != nil {
+		return parseField(field.GetOneOf().GetChoices()[0])
 	}
 
 	switch field.GetType() {

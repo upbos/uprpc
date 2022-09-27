@@ -9,3 +9,11 @@ export function OpenProto() {
 export function ParseProto(arg1, arg2) {
   return window['go']['api']['Api']['ParseProto'](arg1, arg2);
 }
+
+export function Send(arg1) {
+  return window['go']['api']['Api']['Send'](arg1);
+}
+
+export function Stop(arg1) {
+  return window['go']['api']['Api']['Stop'](arg1);
+}

@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"uprpc/client"
 	"uprpc/proto"
 )
 
@@ -34,4 +35,12 @@ func (api *Api) ParseProto(fileNames []string, includeDirs []string) R {
 	} else {
 		return R{Success: true, Data: files}
 	}
+}
+
+func (api *Api) Send(req client.RequestData) R {
+	return R{Success: true, Data: nil}
+}
+
+func (api *Api) Stop(id string) R {
+	return R{Success: true, Data: nil}
 }

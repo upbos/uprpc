@@ -1,55 +1,4 @@
-export namespace types {
-	
-	export class RequestData {
-	    id: string;
-	    protoPath: string;
-	    namespace: string;
-	    serviceName: string;
-	    methodName: string;
-	    methodMode: number;
-	    host: string;
-	    body: string;
-	    mds: string;
-	    IncludeDirs: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new RequestData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.protoPath = source["protoPath"];
-	        this.namespace = source["namespace"];
-	        this.serviceName = source["serviceName"];
-	        this.methodName = source["methodName"];
-	        this.methodMode = source["methodMode"];
-	        this.host = source["host"];
-	        this.body = source["body"];
-	        this.mds = source["mds"];
-	        this.IncludeDirs = source["IncludeDirs"];
-	    }
-	}
-	export class ResponseData {
-	    id: string;
-	    body: string;
-	    mds: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new ResponseData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.body = source["body"];
-	        this.mds = source["mds"];
-	    }
-	}
-
-}
-
-export namespace main {
+export namespace proto {
 	
 	export class Metadata {
 	    id?: number;
@@ -148,6 +97,57 @@ export namespace main {
 		    }
 		    return a;
 		}
+	}
+
+}
+
+export namespace types {
+	
+	export class RequestData {
+	    id: string;
+	    protoPath: string;
+	    namespace: string;
+	    serviceName: string;
+	    methodName: string;
+	    methodMode: number;
+	    host: string;
+	    body: string;
+	    mds: string;
+	    IncludeDirs: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RequestData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.protoPath = source["protoPath"];
+	        this.namespace = source["namespace"];
+	        this.serviceName = source["serviceName"];
+	        this.methodName = source["methodName"];
+	        this.methodMode = source["methodMode"];
+	        this.host = source["host"];
+	        this.body = source["body"];
+	        this.mds = source["mds"];
+	        this.IncludeDirs = source["IncludeDirs"];
+	    }
+	}
+	export class ResponseData {
+	    id: string;
+	    body: string;
+	    mds: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ResponseData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.body = source["body"];
+	        this.mds = source["mds"];
+	    }
 	}
 
 }

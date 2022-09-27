@@ -1,4 +1,4 @@
-package main
+package proto
 
 import (
 	"bytes"
@@ -9,7 +9,6 @@ import (
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
 	uuid "github.com/satori/go.uuid"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"path"
 )
 
@@ -48,22 +47,8 @@ func NewParser() *Parser {
 	return &Parser{}
 }
 
-func (p *Parser) startup(ctx context.Context) {
+func (p *Parser) Startup(ctx context.Context) {
 	p.ctx = ctx
-}
-
-func (p *Parser) ImportFile() []string {
-	selection, _ := runtime.OpenMultipleFilesDialog(p.ctx, runtime.OpenDialogOptions{
-		Title: "Import File",
-		Filters: []runtime.FileFilter{
-			{
-				DisplayName: "proto (*.proto)",
-				Pattern:     "*.proto",
-			},
-		},
-	})
-
-	return selection
 }
 
 func (p *Parser) Parse(fileNames []string) []*File {

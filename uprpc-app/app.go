@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"uprpc/types"
 )
 
@@ -24,4 +25,18 @@ func (a *App) startup(ctx context.Context) {
 // OpenProto open file dialog
 func (a *App) Send(reqData types.RequestData) types.ResponseData {
 	return a.Send(reqData)
+}
+
+func (p *App) ImportFile() []string {
+	selection, _ := runtime.OpenMultipleFilesDialog(p.ctx, runtime.OpenDialogOptions{
+		Title: "Import File",
+		Filters: []runtime.FileFilter{
+			{
+				DisplayName: "proto (*.proto)",
+				Pattern:     "*.proto",
+			},
+		},
+	})
+
+	return selection
 }

@@ -1,7 +1,7 @@
 import { makeAutoObservable } from "mobx";
 import { Method, Mode, Proto, RequestCache, RequestData, ResponseCache, ResponseData } from "@/types/types";
 import * as storage from "./localStorage";
-import { ImportFile } from "@/wailsjs/go/main/Parser";
+import { ImportFile } from "@/wailsjs/go/main/App";
 
 export default class ProtoStore {
     constructor() {

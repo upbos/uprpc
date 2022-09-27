@@ -22,16 +22,17 @@ export namespace api {
 export namespace client {
 	
 	export class RequestData {
-	    id: string;
-	    protoPath: string;
+	    id?: string;
+	    protoPath?: string;
 	    namespace: string;
-	    serviceName: string;
-	    methodName: string;
-	    methodMode: number;
-	    host: string;
-	    body: string;
-	    mds: string;
-	    IncludeDirs: string;
+	    serviceName?: string;
+	    serviceFullyName?: string;
+	    methodName?: string;
+	    methodMode?: number;
+	    host?: string;
+	    body?: string;
+	    mds?: any;
+	    includeDirs?: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new RequestData(source);
@@ -43,12 +44,13 @@ export namespace client {
 	        this.protoPath = source["protoPath"];
 	        this.namespace = source["namespace"];
 	        this.serviceName = source["serviceName"];
+	        this.serviceFullyName = source["serviceFullyName"];
 	        this.methodName = source["methodName"];
 	        this.methodMode = source["methodMode"];
 	        this.host = source["host"];
 	        this.body = source["body"];
 	        this.mds = source["mds"];
-	        this.IncludeDirs = source["IncludeDirs"];
+	        this.includeDirs = source["includeDirs"];
 	    }
 	}
 

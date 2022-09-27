@@ -59,7 +59,7 @@ const editor = ({proto, method: initMethod}: EditorProp) => {
             mds: requestMds,
             methodMode: method.mode,
             methodName: method.name,
-            namespace: method.namespace,
+            serviceFullyName: method.serviceFullyName,
             serviceName: method.serviceName,
             protoPath: proto.path,
             host: host,

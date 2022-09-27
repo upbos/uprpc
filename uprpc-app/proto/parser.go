@@ -17,6 +17,7 @@ var b2i = map[bool]int8{false: 0, true: 1}
 
 type File struct {
 	Id      string    `json:"id"`
+	Host    string    `json:"host"`
 	Name    string    `json:"name"`
 	Path    string    `json:"path"`
 	Methods []*Method `json:"methods"`
@@ -67,9 +68,10 @@ func Parse(fileNames []string, includeDirs []string) ([]*File, error) {
 
 	var files []*File
 	for i, fileDesc := range fileDescs {
-		file := File{Id: uuid.NewV4().String(), Name: path.Base(fileNames[i]), Path: fileNames[i]}
+		file := File{Id: uuid.NewV4().String(), Host: "127.0.0.1:9000", Name: path.Base(fileNames[i]), Path: fileNames[i]}
 		services := fileDesc.GetServices()
 		file.Methods = parseMethod(services)
+
 		files = append(files, &file)
 	}
 	return files, nil

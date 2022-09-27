@@ -2,9 +2,6 @@ package client
 
 import (
 	"context"
-	"io"
-	"log"
-
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
 	"github.com/jhump/protoreflect/dynamic"
@@ -13,19 +10,22 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/runtime/protoiface"
+	"io"
+	"log"
 )
 
 type RequestData struct {
-	Id          string `json:"id"`
-	ProtoPath   string `json:"protoPath"`
-	Namespace   string `json:"namespace"`
-	ServiceName string `json:"serviceName"`
-	MethodName  string `json:"methodName"`
-	MethodMode  Mode   `json:"methodMode"`
-	Host        string `json:"host"`
-	Body        string `json:"body"`
-	Mds         string `json:"mds"`
-	IncludeDirs string `json:"IncludeDirs"`
+	Id               string      `json:"id,omitempty"`
+	ProtoPath        string      `json:"protoPath,omitempty"`
+	Namespace        string      `json:"namespace"`
+	ServiceName      string      `json:"serviceName,omitempty"`
+	ServiceFullyName string      `json:"serviceFullyName,omitempty"`
+	MethodName       string      `json:"methodName,omitempty"`
+	MethodMode       Mode        `json:"methodMode,omitempty"`
+	Host             string      `json:"host,omitempty"`
+	Body             string      `json:"body,omitempty"`
+	Mds              interface{} `json:"mds,omitempty"`
+	IncludeDirs      []string    `json:"includeDirs,omitempty"`
 }
 
 type ResponseData struct {

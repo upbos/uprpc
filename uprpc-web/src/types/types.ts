@@ -69,6 +69,7 @@ export interface RequestData {
     protoPath: string;
     namespace: string;
     serviceName: string;
+    serviceFullyName: string;
     methodName: string;
     methodMode: Mode;
     host: string;
@@ -102,6 +103,7 @@ export interface Method {
     id: string;
     namespace: string,
     serviceName: string,
+    serviceFullyName: string;
     name: string;
     mode: Mode;
     requestBody: string;

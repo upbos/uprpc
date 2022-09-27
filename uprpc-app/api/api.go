@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"uprpc/client"
 	"uprpc/proto"
 )
@@ -38,6 +39,7 @@ func (api *Api) ParseProto(fileNames []string, includeDirs []string) R {
 }
 
 func (api *Api) Send(req client.RequestData) R {
+	runtime.LogPrintf(api.ctx, "%+v", req)
 	return R{Success: true, Data: nil}
 }
 

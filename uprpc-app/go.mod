@@ -7,6 +7,8 @@ require (
 	github.com/jhump/protoreflect v1.13.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/wailsapp/wails/v2 v2.0.0
+	google.golang.org/grpc v1.38.0
+	google.golang.org/protobuf v1.26.0
 )
 
 require (
@@ -34,5 +36,4 @@ require (
 	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
-	google.golang.org/protobuf v1.26.0 // indirect
 )

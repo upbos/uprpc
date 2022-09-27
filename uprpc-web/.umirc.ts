@@ -4,7 +4,7 @@ export default {
     antd: {},
     history: { type: 'hash' },
     publicPath: '/',
-    outputPath: "../uprpc-app/frontend",
+    outputPath: "../uprpc-app/frontend/dist",
     routes: [
         {path: '/', component: 'index'}
     ],

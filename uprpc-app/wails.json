@@ -1,8 +1,12 @@
 {
   "name": "uprpc-go",
   "outputfilename": "uprpc",
-  "wailsjsdir": "../uprpc-web/src",
+  "assetdir": "frontend/dist",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "http://localhost:8000",
+  "wailsjsdir": "../uprpc-web/src",
   "author": {
     "name": "Jason Wang",
     "email": "wjzchina2008@126.com"

@@ -67,7 +67,6 @@ export interface Metadata {
 export interface RequestData {
     id: string;
     protoPath: string;
-    namespace: string;
     serviceName: string;
     serviceFullyName: string;
     methodName: string;

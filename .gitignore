@@ -1,6 +1,0 @@
-node_modules
-frontend/dist
-build/
-/frontend/package.json.md5
-/frontend/package-lock.json
-/uprpc-app/frontend/

@@ -18,9 +18,9 @@ func (api *Api) Startup(ctx context.Context) {
 }
 
 type R struct {
-	Success bool
-	Message string
-	Data    interface{}
+	Success bool        `json:"success,omitempty"`
+	Message string      `json:"message,omitempty"`
+	Data    interface{} `json:"data,omitempty"`
 }
 
 func (api *Api) OpenProto() R {

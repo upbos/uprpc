@@ -9,6 +9,7 @@ import (
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
 	uuid "github.com/satori/go.uuid"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"path"
 )
 
@@ -26,7 +27,7 @@ type Method struct {
 	ServiceName      string     `json:"serviceName,omitempty"`
 	ServiceFullyName string     `json:"serviceFullyName,omitempty"`
 	Name             string     `json:"name,omitempty"`
-	Mode             int8       `json:"mode,omitempty"`
+	Mode             int8       `json:"mode"`
 	RequestBody      string     `json:"requestBody,omitempty"`
 	RequestMds       []Metadata `json:"requestMds,omitempty"`
 	ResponseMds      []Metadata `json:"responseMds,omitempty"`
@@ -39,26 +40,29 @@ type Metadata struct {
 	ParseType int8   `json:"parseType,omitempty"`
 }
 
-type Parser struct {
-	ctx context.Context
+func ImportFile(ctx context.Context) []string {
+	selection, _ := runtime.OpenMultipleFilesDialog(ctx, runtime.OpenDialogOptions{
+		Title: "Import File",
+		Filters: []runtime.FileFilter{
+			{
+				DisplayName: "proto (*.proto)",
+				Pattern:     "*.proto",
+			},
+		},
+	})
+
+	return selection
 }
 
-func NewParser() *Parser {
-	return &Parser{}
-}
-
-func (p *Parser) Startup(ctx context.Context) {
-	p.ctx = ctx
-}
-
-func (p *Parser) Parse(fileNames []string) []*File {
+func Parse(fileNames []string, includeDirs []string) ([]*File, error) {
 	// 创建parser对象
 	parser := protoparse.Parser{}
+	parser.ImportPaths = includeDirs
 	// 使用path的方式解析得到一些列文件描述对象，这里只有一个文件描述对象
 	fileDescs, err := parser.ParseFiles(fileNames...)
 	if err != nil {
 		fmt.Printf("parse proto file failed, err = %s", err.Error())
-		return nil
+		return nil, err
 	}
 
 	var files []*File
@@ -68,7 +72,7 @@ func (p *Parser) Parse(fileNames []string) []*File {
 		file.Methods = parseMethod(services)
 		files = append(files, &file)
 	}
-	return files
+	return files, nil
 }
 
 func parseMethod(services []*desc.ServiceDescriptor) []*Method {

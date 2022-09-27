@@ -1,7 +1,7 @@
-import { makeAutoObservable } from "mobx";
-import { Method, Mode, Proto, RequestCache, RequestData, ResponseCache, ResponseData } from "@/types/types";
+import {makeAutoObservable} from "mobx";
+import {Method, Mode, Proto, RequestCache, RequestData, ResponseCache, ResponseData} from "@/types/types";
 import * as storage from "./localStorage";
-import { ImportFile } from "@/wailsjs/go/main/App";
+import {OpenProto, ParseProto} from "@/wailsjs/go/api/Api";
 
 export default class ProtoStore {
     constructor() {
@@ -47,25 +47,21 @@ export default class ProtoStore {
             let streams = responseCache.streams;
             if (streams == null) return;
             streams.unshift(value.body);
-            this.responseCaches.set(value.id, { ...responseCache, streams: streams, mds: value.mds });
+            this.responseCaches.set(value.id, {...responseCache, streams: streams, mds: value.mds});
         });
     }
 
-    *importProto(): any {
-        let protos = yield ImportFile();
-        console.log(protos);
-        debugger;
-        return;
-        let res = yield window.rpc.openProto();
+    * importProto(): any {
+        let res = yield OpenProto();
         if (!res.success) return res;
 
-        res = yield window.rpc.parseProto(res.data, storage.listIncludeDir());
+        res = yield ParseProto(res.data, storage.listIncludeDir());
         storage.addProtos(res.data);
         this.initProto();
-        return { success: true };
+        return {success: true};
     }
 
-    *reloadProto(): any {
+    * reloadProto(): any {
         let paths: string[] = [];
         storage.listProto().forEach((value) => paths.push(value.path));
         let res = yield window.rpc.parseProto(paths, storage.listIncludeDir());
@@ -77,12 +73,12 @@ export default class ProtoStore {
         this.initProto();
     }
 
-    *deleteProto(id: string): any {
+    * deleteProto(id: string): any {
         storage.removeProto(id);
         this.initProto();
     }
 
-    *saveProto(proto: Proto, host: string, method: Method) {
+    * saveProto(proto: Proto, host: string, method: Method) {
         console.log("save proto method", method);
         proto.host = host;
         for (let i = 0; i < proto.methods.length; i++) {
@@ -95,7 +91,7 @@ export default class ProtoStore {
         this.initProto();
     }
 
-    *send(requestData: RequestData): any {
+    * send(requestData: RequestData): any {
         this.removeCache(requestData.id);
         yield this.push(requestData);
         if (requestData.methodMode != Mode.Unary) {
@@ -103,28 +99,28 @@ export default class ProtoStore {
         }
     }
 
-    *push(requestData: RequestData): any {
+    * push(requestData: RequestData): any {
         console.log("send request data", requestData);
         let requestCache = this.requestCaches.get(requestData.id);
         if (requestCache == null) {
-            this.requestCaches.set(requestData.id, { streams: [requestData.body] });
+            this.requestCaches.set(requestData.id, {streams: [requestData.body]});
         } else {
             let streams = requestCache.streams;
             streams?.unshift(requestData.body);
-            this.requestCaches.set(requestData.id, { streams: streams });
+            this.requestCaches.set(requestData.id, {streams: streams});
         }
         requestData.includeDirs = storage.listIncludeDir();
         yield window.rpc.send(requestData);
     }
 
-    *removeCache(methodId: string): any {
+    * removeCache(methodId: string): any {
         // 清空缓存
         this.requestCaches.delete(methodId);
         this.responseCaches.delete(methodId);
         this.runningCaches.delete(methodId);
     }
 
-    *stopStream(methodId: string) {
+    * stopStream(methodId: string) {
         console.log("request stop stream2");
         yield window.rpc.stopStream(methodId);
         this.runningCaches.set(methodId, false);

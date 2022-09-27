@@ -2,13 +2,15 @@ package api
 
 import (
 	"context"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"uprpc/client"
 	"uprpc/proto"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type Api struct {
 	ctx context.Context
+	cli *client.Client
 }
 
 func NewApi() *Api {
@@ -17,6 +19,7 @@ func NewApi() *Api {
 
 func (api *Api) Startup(ctx context.Context) {
 	api.ctx = ctx
+	api.cli = client.New(ctx)
 }
 
 type R struct {
@@ -40,9 +43,14 @@ func (api *Api) ParseProto(fileNames []string, includeDirs []string) R {
 
 func (api *Api) Send(req client.RequestData) R {
 	runtime.LogPrintf(api.ctx, "%+v", req)
+	respData := api.cli.Send(req)
+	if respData != nil {
+		return R{Success: true, Data: respData}
+	}
 	return R{Success: true, Data: nil}
 }
 
 func (api *Api) Stop(id string) R {
+	api.cli.Stop(id)
 	return R{Success: true, Data: nil}
 }

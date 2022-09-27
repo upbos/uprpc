@@ -2,6 +2,9 @@ package client
 
 import (
 	"context"
+	"io"
+	"log"
+
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
 	"github.com/jhump/protoreflect/dynamic"
@@ -10,14 +13,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/runtime/protoiface"
-	"io"
-	"log"
 )
 
 type RequestData struct {
 	Id               string      `json:"id,omitempty"`
 	ProtoPath        string      `json:"protoPath,omitempty"`
-	Namespace        string      `json:"namespace"`
 	ServiceName      string      `json:"serviceName,omitempty"`
 	ServiceFullyName string      `json:"serviceFullyName,omitempty"`
 	MethodName       string      `json:"methodName,omitempty"`
@@ -29,9 +29,9 @@ type RequestData struct {
 }
 
 type ResponseData struct {
-	Id   string `json:"id"`
-	Body string `json:"body"`
-	Mds  string `json:"mds"`
+	Id   string      `json:"id"`
+	Body string      `json:"body"`
+	Mds  interface{} `json:"mds"`
 }
 
 type Mode int
@@ -52,20 +52,22 @@ type ClientStub struct {
 }
 
 type Client struct {
+	ctx   context.Context
 	stubs map[string]*ClientStub
 	write chan interface{}
 	stop  chan string
 }
 
-func New() *Client {
+func New(ctx context.Context) *Client {
 	return &Client{
+		ctx:   ctx,
 		stubs: make(map[string]*ClientStub),
 		write: make(chan interface{}, 10),
 		stop:  make(chan string, 10),
 	}
 }
 
-func (c *Client) Send(req RequestData) ResponseData {
+func (c *Client) Send(req RequestData) *ResponseData {
 	switch req.MethodMode {
 	case Unary:
 		return c.invokeUnary(req)
@@ -76,19 +78,20 @@ func (c *Client) Send(req RequestData) ResponseData {
 	case BidirectionalStream:
 		return c.invokeBidirectionalStream(req)
 	}
-	return ResponseData{}
+	return nil
 }
 
 func (c *Client) Stop(id string) {
 	c.stop <- id
 }
 
-func callback(data interface{}, err error) {
-	runtime.EventsEmit(context.Background(), "data", data)
+func (c *Client) callback(data interface{}, err error) {
+	log.Printf("retrun response data: %s", data)
+	runtime.EventsEmit(c.ctx, "data", data)
 }
 
 func (c *Client) createStub(req *RequestData) (*ClientStub, error) {
-	key := req.Namespace + "." + req.ServiceName
+	key := req.ServiceFullyName
 	if c.stubs[key] != nil {
 		stub := c.stubs[key]
 		if stub.host == req.Host {
@@ -117,44 +120,44 @@ func (c *Client) createStub(req *RequestData) (*ClientStub, error) {
 	}, nil
 }
 
-func (c *Client) invokeUnary(req RequestData) ResponseData {
+func (c *Client) invokeUnary(req RequestData) *ResponseData {
 	stub, err := c.createStub(&req)
 	handleError(err)
 
-	methodDesc := stub.proto.FindService(req.Namespace + "." + req.ServiceName).FindMethodByName(req.MethodName)
+	methodDesc := stub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
 	respDesc := methodDesc.GetOutputType()
 
 	// send metadata
-	reqMd := metadata.Pairs("code", "a")
-	ctx := metadata.NewOutgoingContext(context.Background(), reqMd)
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "code", "a")
+	// receive metadata
+	var trailer metadata.MD
 
 	// call method
 	reqMsg := dynamic.NewMessage(reqDesc)
 	reqMsg.UnmarshalMergeJSON([]byte(req.Body))
-	resp, err := stub.stub.InvokeRpc(ctx, methodDesc, reqMsg)
+	resp, err := stub.stub.InvokeRpc(ctx, methodDesc, reqMsg, grpc.Trailer(&trailer))
 	if err != nil {
-		log.Printf("call error: %s", err.Error())
-		return ResponseData{}
+		log.Printf("call error: %s %s  %s", err.Error(), resp, trailer)
+		return nil
 	}
 
 	respMsg := dynamic.NewMessage(respDesc)
 	respMsg.ConvertFrom(resp)
 	message := respMsg.GetFieldByName("message")
-	log.Printf("resp:%s", respMsg)
-	// resMd, ok := metadata.FromIncomingContext(ctx)
-
-	return ResponseData{
+	log.Printf("resp :%s %s ", respMsg, trailer)
+	return &ResponseData{
 		Id:   req.Id,
 		Body: message.(string),
+		Mds:  trailer,
 	}
 }
 
-func (c *Client) invokeServerStream(req RequestData) ResponseData {
+func (c *Client) invokeServerStream(req RequestData) *ResponseData {
 	stub, err := c.createStub(&req)
 	handleError(err)
 
-	methodDesc := stub.proto.FindService(req.Namespace + "." + req.ServiceName).FindMethodByName(req.MethodName)
+	methodDesc := stub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
 	respDesc := methodDesc.GetOutputType()
 
@@ -165,14 +168,14 @@ func (c *Client) invokeServerStream(req RequestData) ResponseData {
 	handleError(err)
 
 	go c.readStream(serverStream, respDesc, req.Id)
-	return ResponseData{}
+	return nil
 }
 
-func (c *Client) invokeClientStream(req RequestData) ResponseData {
+func (c *Client) invokeClientStream(req RequestData) *ResponseData {
 	stub, err := c.createStub(&req)
 	handleError(err)
 
-	methodDesc := stub.proto.FindService(req.Namespace + "." + req.ServiceName).FindMethodByName(req.MethodName)
+	methodDesc := stub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
 	respDesc := methodDesc.GetOutputType()
 
@@ -181,7 +184,7 @@ func (c *Client) invokeClientStream(req RequestData) ResponseData {
 
 	if stub.call != nil {
 		c.write <- reqMsg
-		return ResponseData{}
+		return nil
 	}
 
 	// create new call for method
@@ -193,15 +196,15 @@ func (c *Client) invokeClientStream(req RequestData) ResponseData {
 	go c.writeStream(clientStream, respDesc, req.Id)
 
 	c.write <- reqMsg
-	return ResponseData{}
+	return nil
 
 }
 
-func (c *Client) invokeBidirectionalStream(req RequestData) ResponseData {
+func (c *Client) invokeBidirectionalStream(req RequestData) *ResponseData {
 	stub, err := c.createStub(&req)
 	handleError(err)
 
-	methodDesc := stub.proto.FindService(req.Namespace + "." + req.ServiceName).FindMethodByName(req.MethodName)
+	methodDesc := stub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
 	// respDesc := methodDesc.GetOutputType()
 
@@ -210,7 +213,7 @@ func (c *Client) invokeBidirectionalStream(req RequestData) ResponseData {
 
 	if stub.call != nil {
 		c.write <- reqMsg
-		return ResponseData{}
+		return nil
 	}
 
 	// create new call for method
@@ -223,7 +226,7 @@ func (c *Client) invokeBidirectionalStream(req RequestData) ResponseData {
 	// go c.writeStream(bidiStream, respDesc)
 
 	c.write <- reqMsg
-	return ResponseData{}
+	return nil
 }
 
 func handleError(err error) {
@@ -249,7 +252,7 @@ func (c *Client) readStream(stream *grpcdynamic.ServerStream, respDesc *desc.Mes
 
 			handleError(err)
 			respMsg.ConvertFrom(msg)
-			callback(respMsg, nil)
+			c.callback(respMsg, nil)
 		}
 	}
 }
@@ -266,7 +269,7 @@ func (c *Client) writeStream(stream *grpcdynamic.ClientStream, respDesc *desc.Me
 			msg, err := stream.CloseAndReceive()
 			handleError(err)
 			respMsg.ConvertFrom(msg)
-			callback(respMsg, nil)
+			c.callback(respMsg, nil)
 		case reqData := <-c.write:
 			err := stream.SendMsg(reqData.(protoiface.MessageV1))
 			handleError(err)

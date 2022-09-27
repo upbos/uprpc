@@ -29,7 +29,10 @@ export class HelloWorldService {
     // 简单gRPC调用
     sayHelloSimple(call: any, callback: any) {
         console.log("sayHelloSimple 收到客户端请求：", call.request.name);
-        callback(null, { message: "Hello " + call.request.name });
+        let metadata = new Metadata();
+        // keys that end with '-bin' must have Buffer values
+        metadata.add("code", "code1");
+        callback(null, { message: "Hello " + call.request.name }, metadata);
     }
     // 简单gRPC调用
     sayHelloSimpleError(call: any, callback: any) {

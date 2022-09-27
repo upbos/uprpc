@@ -1,30 +1,8 @@
-export namespace api {
-	
-	export class R {
-	    success?: boolean;
-	    message?: string;
-	    data?: any;
-	
-	    static createFrom(source: any = {}) {
-	        return new R(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.success = source["success"];
-	        this.message = source["message"];
-	        this.data = source["data"];
-	    }
-	}
-
-}
-
 export namespace client {
 	
 	export class RequestData {
 	    id?: string;
 	    protoPath?: string;
-	    namespace: string;
 	    serviceName?: string;
 	    serviceFullyName?: string;
 	    methodName?: string;
@@ -42,7 +20,6 @@ export namespace client {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.protoPath = source["protoPath"];
-	        this.namespace = source["namespace"];
 	        this.serviceName = source["serviceName"];
 	        this.serviceFullyName = source["serviceFullyName"];
 	        this.methodName = source["methodName"];
@@ -51,6 +28,27 @@ export namespace client {
 	        this.body = source["body"];
 	        this.mds = source["mds"];
 	        this.includeDirs = source["includeDirs"];
+	    }
+	}
+
+}
+
+export namespace api {
+	
+	export class R {
+	    success?: boolean;
+	    message?: string;
+	    data?: any;
+	
+	    static createFrom(source: any = {}) {
+	        return new R(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.success = source["success"];
+	        this.message = source["message"];
+	        this.data = source["data"];
 	    }
 	}
 

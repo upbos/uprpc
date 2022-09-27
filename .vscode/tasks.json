@@ -1,6 +1,20 @@
 {
 	"version": "2.0.0",
 	"tasks": [
+		{
+			"label": "yarn dev",
+			"type": "npm",
+			"script": "dev",
+			"options": {
+			  "cwd": "${workspaceFolder}/uprpc-web"
+			},
+			"presentation": {
+			  "clear": true,
+			  "panel": "shared",
+			  "showReuseMessage": false
+			},
+			"problemMatcher": []
+		  },
 	  {
 		"label": "build",
 		"type": "shell",
@@ -67,9 +81,13 @@
 		  "production,desktop,debug",
 		  "-gcflags",
 		  "all=-N -l",
+		  "-frontenddevserverurl",
+		  "http://localhost:8000",
 		  "-o",
 		  "build/bin/uprpc-go"
-		]
+		],
+		"dependsOn": [
+        ]
 	  },
 	  {
 		"label": "build dev",

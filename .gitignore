@@ -1,7 +1,5 @@
 node_modules
-frontend/dist
-build/
-/frontend/package.json.md5
-/frontend/package-lock.json
-/uprpc-app/frontend/
+build
 /uprpc-mock/dist
+uprpc-app/frontend/package.json.md5
+uprpc-app/frontend/package-lock.json

@@ -1,10 +1,10 @@
 package app
 
 import (
-	"changeme/types"
 	"context"
 	"io"
 	"log"
+	"uprpc/types"
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic"
@@ -175,7 +175,7 @@ func (c *Client) invokeBidirectionalStream(req types.RequestData) types.Response
 
 	methodDesc := stub.proto.FindService(req.Namespace + "." + req.ServiceName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
-	respDesc := methodDesc.GetOutputType()
+	// respDesc := methodDesc.GetOutputType()
 
 	reqMsg := dynamic.NewMessage(reqDesc)
 	reqMsg.UnmarshalMergeJSON([]byte(req.Body))
@@ -186,13 +186,13 @@ func (c *Client) invokeBidirectionalStream(req types.RequestData) types.Response
 	}
 
 	// create new call for method
-	bidiStream, err := stub.stub.InvokeRpcBidiStream(context.Background(), methodDesc, reqMsg)
+	bidiStream, err := stub.stub.InvokeRpcBidiStream(context.Background(), methodDesc)
 	handleError(err)
 
 	// cache clientStream
 	stub.call = bidiStream
-	go c.readStream(bidiStream, respDesc, req.Id)
-	go c.writeStream(bidiStream, respDesc)
+	// go c.readStream(bidiStream, respDesc, req.Id)
+	// go c.writeStream(bidiStream, respDesc)
 
 	c.write <- reqMsg
 	return types.ResponseData{}

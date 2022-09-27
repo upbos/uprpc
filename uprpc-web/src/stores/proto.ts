@@ -3,6 +3,7 @@ import {Method, Mode, Proto, RequestCache, RequestData, ResponseCache, ResponseD
 import * as storage from "./localStorage";
 import {OpenProto, ParseProto, Send} from "@/wailsjs/go/main/Api";
 import {client} from "@/wailsjs/go/models";
+import {EventsOn} from "@/wailsjs/runtime";
 
 export default class ProtoStore {
     constructor() {
@@ -19,7 +20,7 @@ export default class ProtoStore {
     init(): void {
         this.initProto();
         // this.onEndStream();
-        // this.onResponse();
+        this.onResponse();
     }
 
     initProto(): void {
@@ -33,7 +34,7 @@ export default class ProtoStore {
     }
 
     onResponse() {
-        window.rpc.handleResponse((event: any, value: ResponseData) => {
+        EventsOn('data', (value: ResponseData) => {
             console.log("Response data1: ", value);
             let responseCache = this.responseCaches.get(value.id);
             if (responseCache == null) {
@@ -49,7 +50,7 @@ export default class ProtoStore {
             if (streams == null) return;
             streams.unshift(value.body);
             this.responseCaches.set(value.id, {...responseCache, streams: streams, mds: value.mds});
-        });
+        })
     }
 
     * importProto(): any {
@@ -112,7 +113,6 @@ export default class ProtoStore {
             this.requestCaches.set(requestData.id, {streams: streams});
         }
         requestData.includeDirs = storage.listIncludeDir();
-        debugger
         yield Send(new client.RequestData(requestData))
     }
 

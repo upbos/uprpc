@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Wails: Production uprpc-go",
+        "type": "go",
+        "request": "launch",
+        "mode": "exec",
+        "program": "${workspaceFolder}/uprpc-app/build/bin/uprpc-go",
+        "preLaunchTask": "build",
+        "cwd": "${workspaceFolder}"
+      },
+      {
+        "name": "Wails: Debug uprpc-go",
+        "type": "go",
+        "request": "launch",
+        "mode": "exec",
+        "program": "${workspaceFolder}/uprpc-app/build/bin/uprpc-go",
+        "preLaunchTask": "build debug",
+        "cwd": "${workspaceFolder}"
+      },
+      {
+        "name": "Wails: Dev uprpc-go",
+        "type": "go",
+        "request": "launch",
+        "mode": "exec",
+        "program": "${workspaceFolder}/uprpc-app/build/bin/uprpc-go",
+        "preLaunchTask": "build dev",
+        "cwd": "${workspaceFolder}"
+      }
+    ]
+  }

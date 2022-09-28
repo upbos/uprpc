@@ -43,10 +43,7 @@ func (api *Api) ParseProto(fileNames []string, includeDirs []string) R {
 
 func (api *Api) Send(req client.RequestData) R {
 	runtime.LogPrintf(api.ctx, "%+v", req)
-	respData := api.cli.Send(req)
-	if respData != nil {
-		return R{Success: true, Data: respData}
-	}
+	api.cli.Send(req)
 	return R{Success: true, Data: nil}
 }
 

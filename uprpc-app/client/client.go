@@ -2,8 +2,11 @@ package client
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"log"
+	"strings"
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
@@ -67,27 +70,41 @@ func New(ctx context.Context) *Client {
 	}
 }
 
-func (c *Client) Send(req RequestData) *ResponseData {
+func (c *Client) Send(req RequestData) {
+	defer c.recovery()
+
 	switch req.MethodMode {
 	case Unary:
-		return c.invokeUnary(req)
+		c.invokeUnary(req)
 	case ServerStream:
-		return c.invokeServerStream(req)
+		c.invokeServerStream(req)
 	case ClientStream:
-		return c.invokeClientStream(req)
+		c.invokeClientStream(req)
 	case BidirectionalStream:
-		return c.invokeBidirectionalStream(req)
+		c.invokeBidirectionalStream(req)
 	}
-	return nil
 }
 
 func (c *Client) Stop(id string) {
 	c.stop <- id
 }
 
-func (c *Client) callback(data interface{}, err error) {
-	log.Printf("retrun response data: %s", data)
-	runtime.EventsEmit(c.ctx, "data", data)
+func (c *Client) returnReponse(id string, data *dynamic.Message, mds metadata.MD, err error) {
+	var body string
+	if data != nil {
+		byte, _ := data.MarshalJSON()
+		body = string(byte)
+	}
+	if err != nil {
+		body = fmt.Sprintf("%s", err)
+	}
+	respData := ResponseData{
+		Id:   id,
+		Body: body,
+		Mds:  mds,
+	}
+	log.Printf("retrun response data: %v", respData)
+	runtime.EventsEmit(c.ctx, "data", respData)
 }
 
 func (c *Client) createStub(req *RequestData) (*ClientStub, error) {
@@ -103,14 +120,11 @@ func (c *Client) createStub(req *RequestData) (*ClientStub, error) {
 
 	//  parse proto
 	proto, err := parse(req.ProtoPath)
-	handleError(err)
+	handleError(req.Id, err)
 
 	// create connect
 	conn, err := grpc.Dial(req.Host, grpc.WithInsecure())
-	if err != nil {
-		log.Printf("call error: %s", err.Error())
-		return nil, err
-	}
+	handleError(req.Id, err)
 
 	// create stub
 	stub := grpcdynamic.NewStub(conn)
@@ -123,7 +137,7 @@ func (c *Client) createStub(req *RequestData) (*ClientStub, error) {
 
 func (c *Client) invokeUnary(req RequestData) *ResponseData {
 	stub, err := c.createStub(&req)
-	handleError(err)
+	handleError(req.Id, err)
 
 	methodDesc := stub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
@@ -138,25 +152,18 @@ func (c *Client) invokeUnary(req RequestData) *ResponseData {
 	reqMsg := dynamic.NewMessage(reqDesc)
 	reqMsg.UnmarshalMergeJSON([]byte(req.Body))
 	resp, err := stub.stub.InvokeRpc(ctx, methodDesc, reqMsg, grpc.Trailer(&trailer))
-	if err != nil {
-		log.Printf("call error: %s %s  %s", err.Error(), resp, trailer)
-		return nil
-	}
+	handleError(req.Id, err)
 
 	respMsg := dynamic.NewMessage(respDesc)
 	respMsg.ConvertFrom(resp)
-	message := respMsg.GetFieldByName("message")
 	log.Printf("resp :%s %s ", respMsg, trailer)
-	return &ResponseData{
-		Id:   req.Id,
-		Body: message.(string),
-		Mds:  trailer,
-	}
+	c.returnReponse(req.Id, respMsg, trailer, nil)
+	return nil
 }
 
 func (c *Client) invokeServerStream(req RequestData) *ResponseData {
 	stub, err := c.createStub(&req)
-	handleError(err)
+	handleError(req.Id, err)
 
 	methodDesc := stub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
@@ -166,7 +173,7 @@ func (c *Client) invokeServerStream(req RequestData) *ResponseData {
 	reqMsg := dynamic.NewMessage(reqDesc)
 	reqMsg.UnmarshalMergeJSON([]byte(req.Body))
 	serverStream, err := stub.stub.InvokeRpcServerStream(context.Background(), methodDesc, reqMsg)
-	handleError(err)
+	handleError(req.Id, err)
 
 	go c.readStream(serverStream, respDesc, req.Id)
 	return nil
@@ -174,7 +181,7 @@ func (c *Client) invokeServerStream(req RequestData) *ResponseData {
 
 func (c *Client) invokeClientStream(req RequestData) *ResponseData {
 	stub, err := c.createStub(&req)
-	handleError(err)
+	handleError(req.Id, err)
 
 	methodDesc := stub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
@@ -190,7 +197,7 @@ func (c *Client) invokeClientStream(req RequestData) *ResponseData {
 
 	// create new call for method
 	clientStream, err := stub.stub.InvokeRpcClientStream(context.Background(), methodDesc)
-	handleError(err)
+	handleError(req.Id, err)
 
 	// cache clientStream
 	stub.call = clientStream
@@ -203,11 +210,11 @@ func (c *Client) invokeClientStream(req RequestData) *ResponseData {
 
 func (c *Client) invokeBidirectionalStream(req RequestData) *ResponseData {
 	stub, err := c.createStub(&req)
-	handleError(err)
+	handleError(req.Id, err)
 
 	methodDesc := stub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
-	// respDesc := methodDesc.GetOutputType()
+	respDesc := methodDesc.GetOutputType()
 
 	reqMsg := dynamic.NewMessage(reqDesc)
 	reqMsg.UnmarshalMergeJSON([]byte(req.Body))
@@ -219,64 +226,108 @@ func (c *Client) invokeBidirectionalStream(req RequestData) *ResponseData {
 
 	// create new call for method
 	bidiStream, err := stub.stub.InvokeRpcBidiStream(context.Background(), methodDesc)
-	handleError(err)
+	handleError(req.Id, err)
 
 	// cache clientStream
 	stub.call = bidiStream
-	// go c.readStream(bidiStream, respDesc, req.Id)
-	// go c.writeStream(bidiStream, respDesc)
+	go c.readStream(bidiStream, respDesc, req.Id)
+	go c.writeStream(bidiStream, respDesc, req.Id)
 
 	c.write <- reqMsg
 	return nil
 }
 
-func handleError(err error) {
-	if err != nil {
-		log.Panic(err)
-	}
-}
-
-func (c *Client) readStream(stream *grpcdynamic.ServerStream, respDesc *desc.MessageDescriptor, reqId string) {
+func (c *Client) readStream(stream interface{}, respDesc *desc.MessageDescriptor, reqId string) {
 	respMsg := dynamic.NewMessage(respDesc)
+	serverStream, isServerStream := stream.(*grpcdynamic.ServerStream)
+	bidiStream, isBidiStream := stream.(*grpcdynamic.BidiStream)
 	for {
+		respMsg.Reset()
 		select {
 		case id := <-c.stop:
 			if reqId == id {
 				return
 			}
 		default:
-			msg, err := stream.RecvMsg()
-			if err == io.EOF {
-				// serverStream.Trailer()
-				return
+			var msg protoiface.MessageV1
+			var err error
+			if isServerStream {
+				msg, err = serverStream.RecvMsg()
+				if err == io.EOF {
+					c.returnReponse(reqId, nil, serverStream.Trailer(), nil)
+					return
+				}
+
+			}
+			if isBidiStream {
+				msg, err = bidiStream.RecvMsg()
+				if err == io.EOF {
+					c.returnReponse(reqId, nil, bidiStream.Trailer(), nil)
+					return
+				}
 			}
 
-			handleError(err)
+			handleError(reqId, err)
 			respMsg.ConvertFrom(msg)
-			c.callback(respMsg, nil)
+			c.returnReponse(reqId, respMsg, nil, nil)
 		}
 	}
 }
 
-func (c *Client) writeStream(stream *grpcdynamic.ClientStream, respDesc *desc.MessageDescriptor, reqId string) {
+func (c *Client) writeStream(stream interface{}, respDesc *desc.MessageDescriptor, reqId string) {
 	respMsg := dynamic.NewMessage(respDesc)
+	clientStream, isClientStream := stream.(*grpcdynamic.ClientStream)
+	bidiStream, isBidiStream := stream.(*grpcdynamic.BidiStream)
 	for {
+		respMsg.Reset()
+
 		select {
 		case id := <-c.stop:
 			if reqId != id {
 				continue
 			}
 
-			msg, err := stream.CloseAndReceive()
-			handleError(err)
-			respMsg.ConvertFrom(msg)
-			c.callback(respMsg, nil)
-		case reqData := <-c.write:
-			err := stream.SendMsg(reqData.(protoiface.MessageV1))
-			handleError(err)
-		}
+			if isClientStream {
+				msg, err := clientStream.CloseAndReceive()
+				handleError(reqId, err)
+				respMsg.ConvertFrom(msg)
+				c.returnReponse(reqId, respMsg, clientStream.Trailer(), nil)
+			}
 
+			if isBidiStream {
+				err := bidiStream.CloseSend()
+				handleError(reqId, err)
+				c.returnReponse(reqId, nil, clientStream.Trailer(), nil)
+			}
+
+		case reqData := <-c.write:
+			if isClientStream {
+				err := clientStream.SendMsg(reqData.(protoiface.MessageV1))
+				handleError(reqId, err)
+			}
+			if isBidiStream {
+				err := bidiStream.SendMsg(reqData.(protoiface.MessageV1))
+				handleError(reqId, err)
+			}
+		}
 	}
+}
+
+func handleError(id string, err error) {
+	if err != nil {
+		log.Panic(id + "@@" + err.Error())
+	}
+}
+
+func (c *Client) recovery() {
+	err := recover()
+	if err != nil {
+		if idx := strings.Index(err.(string), "@@"); idx != -1 {
+			c.returnReponse(err.(string)[:idx], nil, nil, errors.New(err.(string)[idx+2:]))
+			return
+		}
+	}
+	panic(err)
 }
 
 func parse(path string) (*desc.FileDescriptor, error) {

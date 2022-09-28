@@ -4,15 +4,14 @@ import (
 	"embed"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
-	"uprpc/api"
 )
 
-//go:embed all:frontend
+//go:embed frontend/dist
 var assets embed.FS
 
 func main() {
 
-	newApi := api.NewApi()
+	newApi := newApi()
 	// Create application with options
 	err := wails.Run(&options.App{
 		Title:            "UpRpc",
@@ -20,7 +19,7 @@ func main() {
 		Height:           768,
 		Assets:           assets,
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
-		OnStartup:        newApi.Startup,
+		OnStartup:        newApi.startup,
 		Bind: []interface{}{
 			newApi,
 		},

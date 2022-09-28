@@ -1,4 +1,4 @@
-package api
+package main
 
 import (
 	"context"
@@ -13,11 +13,11 @@ type Api struct {
 	cli *client.Client
 }
 
-func NewApi() *Api {
+func newApi() *Api {
 	return &Api{}
 }
 
-func (api *Api) Startup(ctx context.Context) {
+func (api *Api) startup(ctx context.Context) {
 	api.ctx = ctx
 	api.cli = client.New(ctx)
 }

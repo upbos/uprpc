@@ -6,6 +6,7 @@ import React from "react";
 import Tabs from "@/pages/components/Tabs";
 
 import {includeDirStore, tabStore, protoStore, context} from '@/stores/context'
+import About from "@/pages/components/About";
 
 export default function HomePage() {
     return (
@@ -17,6 +18,7 @@ export default function HomePage() {
                     </Allotment.Pane>
                     <Tabs/>
                 </Allotment>
+                <About/>
             </ConfigProvider>
         </context.Provider>
     );

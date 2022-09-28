@@ -1,5 +1,5 @@
 {
-  "name": "uprpc-go",
+  "name": "uprpc",
   "outputfilename": "uprpc",
   "assetdir": "frontend/dist",
   "frontend:install": "npm install",

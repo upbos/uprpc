@@ -1,5 +1,4 @@
 node_modules
 build
 /uprpc-mock/dist
-uprpc-app/frontend/package.json.md5
-uprpc-app/frontend/package-lock.json
+uprpc-app/frontend/

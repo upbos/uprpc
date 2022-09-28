@@ -115,9 +115,10 @@ func (c *Client) createStub(req *RequestData) (*ClientStub, error) {
 	// create stub
 	stub := grpcdynamic.NewStub(conn)
 
-	return &ClientStub{
+	c.stubs[key] = &ClientStub{
 		host: req.Host, stub: &stub, conn: conn, proto: proto,
-	}, nil
+	}
+	return c.stubs[key], nil
 }
 
 func (c *Client) invokeUnary(req RequestData) *ResponseData {

@@ -322,12 +322,14 @@ func handleError(id string, err error) {
 func (c *Client) recovery() {
 	err := recover()
 	if err != nil {
+		log.Printf("Recovery:%s", err)
 		if idx := strings.Index(err.(string), "@@"); idx != -1 {
 			c.returnReponse(err.(string)[:idx], nil, nil, errors.New(err.(string)[idx+2:]))
 			return
+		} else {
+			panic(err)
 		}
 	}
-	panic(err)
 }
 
 func parse(path string) (*desc.FileDescriptor, error) {

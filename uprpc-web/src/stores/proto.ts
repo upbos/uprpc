@@ -1,7 +1,7 @@
 import {makeAutoObservable} from "mobx";
 import {Method, Mode, Proto, RequestCache, RequestData, ResponseCache, ResponseData} from "@/types/types";
 import * as storage from "./localStorage";
-import {OpenProto, ParseProto, Send} from "@/wailsjs/go/main/Api";
+import {OpenProto, ParseProto, Send, Stop} from "@/wailsjs/go/main/Api";
 import {client} from "@/wailsjs/go/models";
 import {EventsOn} from "@/wailsjs/runtime";
 
@@ -28,9 +28,9 @@ export default class ProtoStore {
     }
 
     onEndStream() {
-        window.rpc.handleEndStream((event: any, methodId: string) => {
+        EventsOn('end', (methodId: string) => {
             this.runningCaches.set(methodId, false);
-        });
+        })
     }
 
     onResponse() {
@@ -67,7 +67,7 @@ export default class ProtoStore {
     * reloadProto(): any {
         let paths: string[] = [];
         storage.listProto().forEach((value) => paths.push(value.path));
-        let res = yield window.rpc.parseProto(paths, storage.listIncludeDir());
+        let res = yield ParseProto(paths, storage.listIncludeDir());
         if (!res.success) {
             console.log("reload proto error");
             return;
@@ -125,7 +125,7 @@ export default class ProtoStore {
 
     * stopStream(methodId: string) {
         console.log("request stop stream2");
-        yield window.rpc.stopStream(methodId);
+        yield Stop(methodId)
         this.runningCaches.set(methodId, false);
     }
 }

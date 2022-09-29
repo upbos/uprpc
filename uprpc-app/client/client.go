@@ -248,6 +248,15 @@ func (c *Client) readStream(stream interface{}, respDesc *desc.MessageDescriptor
 			if reqId == id {
 				return
 			}
+			// if isServerStream {
+			// 	// TODO
+			// }
+			if isBidiStream {
+				err := bidiStream.CloseSend()
+				handleError(reqId, err)
+				c.returnReponse(reqId, nil, bidiStream.Trailer(), nil)
+			}
+
 		default:
 			var msg protoiface.MessageV1
 			var err error
@@ -297,7 +306,7 @@ func (c *Client) writeStream(stream interface{}, respDesc *desc.MessageDescripto
 			if isBidiStream {
 				err := bidiStream.CloseSend()
 				handleError(reqId, err)
-				c.returnReponse(reqId, nil, clientStream.Trailer(), nil)
+				c.returnReponse(reqId, nil, bidiStream.Trailer(), nil)
 			}
 
 		case reqData := <-c.write:

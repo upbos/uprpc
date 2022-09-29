@@ -2,8 +2,6 @@
   "name": "uprpc",
   "outputfilename": "uprpc",
   "assetdir": "frontend/dist",
-  "frontend:install": "npm install",
-  "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "http://localhost:8000",
   "wailsjsdir": "../uprpc-web/src",

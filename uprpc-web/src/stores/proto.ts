@@ -125,7 +125,7 @@ export default class ProtoStore {
 
     * stopStream(methodId: string) {
         console.log("request stop stream2");
-        yield Stop(methodId)
+        yield Stop(methodId);
         this.runningCaches.set(methodId, false);
     }
 }

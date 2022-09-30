@@ -1,4 +1,4 @@
-import {ParseType} from "../types/types";
+import { ParseType } from "../types/types";
 
 export function encode(value: any, parseType: number) {
     if (ParseType.Text == parseType) {
@@ -70,6 +70,7 @@ export function encode(value: any, parseType: number) {
 }
 
 export function decode(value: any, parseType: number): any {
+    console.log("decode........");
     if (ParseType.Text == parseType) {
         return new TextDecoder().decode(value);
     }

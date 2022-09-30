@@ -88,7 +88,7 @@ const file = () => {
         let treeData = [];
         for (let proto of protos) {
             let item: any = {
-                key: proto.path,
+                id: proto.path,
                 title: <span style={{width: '100%'}}>{getTitle(proto.name, searchValue)}</span>,
                 icon: <FileOutlined/>,
                 children: []
@@ -100,13 +100,17 @@ const file = () => {
                 if (methods == null) {
                     methods = [];
                 }
-                methods.push({key: method.id, title: getTitle(method.name, searchValue), icon: <BlockOutlined/>});
+                methods.push({
+                    ...method,
+                    title: getTitle(method.name, searchValue),
+                    icon: <BlockOutlined/>
+                });
                 serviceMap.set(method.serviceName, methods);
             })
 
             serviceMap.forEach((value, key, map) => {
                 item.children.push({
-                    key: proto.path + key,
+                    id: proto.path + key,
                     title: getTitle(key, searchValue),
                     icon: <DatabaseOutlined/>,
                     children: value
@@ -193,6 +197,7 @@ const file = () => {
                 <Tree.DirectoryTree
                     // @ts-ignore
                     onExpand={onExpand}
+                    fieldNames={{key: 'id', title: 'title', children: 'children'}}
                     expandedKeys={expandedKeys}
                     autoExpandParent={autoExpandParent}
                     onSelect={onSelect}

@@ -47,30 +47,29 @@ const (
 )
 
 type ClientStub struct {
-	host  string
-	stub  *grpcdynamic.Stub
-	conn  *grpc.ClientConn
-	proto *desc.FileDescriptor
-	call  interface{}
+	host      string
+	stub      *grpcdynamic.Stub
+	conn      *grpc.ClientConn
+	proto     *desc.FileDescriptor
+	call      interface{}
+	write     chan interface{}
+	stopRead  chan string
+	stopWrite chan string
 }
 
 type Client struct {
 	ctx   context.Context
 	stubs map[string]*ClientStub
-	write chan interface{}
-	stop  chan string
 }
 
 func New(ctx context.Context) *Client {
 	return &Client{
 		ctx:   ctx,
 		stubs: make(map[string]*ClientStub),
-		write: make(chan interface{}, 10),
-		stop:  make(chan string, 10),
 	}
 }
 
-func (c *Client) Send(req RequestData) {
+func (c *Client) Send(req *RequestData) {
 	defer c.recovery()
 
 	switch req.MethodMode {
@@ -86,7 +85,28 @@ func (c *Client) Send(req RequestData) {
 }
 
 func (c *Client) Stop(id string) {
-	c.stop <- id
+	stub := c.stubs[id]
+	if stub != nil {
+		if stub.stopRead != nil {
+			stub.stopRead <- id
+		}
+		if stub.stopWrite != nil {
+			stub.stopWrite <- id
+		}
+	}
+}
+
+func (c *ClientStub) Close(id string) {
+	c.conn.Close()
+	if c.stopRead != nil {
+		close(c.stopRead)
+	}
+	if c.write != nil {
+		close(c.write)
+	}
+	if c.stopWrite != nil {
+		close(c.stopWrite)
+	}
 }
 
 func (c *Client) returnReponse(id string, data *dynamic.Message, mds metadata.MD, err error) {
@@ -107,17 +127,11 @@ func (c *Client) returnReponse(id string, data *dynamic.Message, mds metadata.MD
 	runtime.EventsEmit(c.ctx, "data", respData)
 }
 
-func (c *Client) createStub(req *RequestData) (*ClientStub, error) {
-	key := req.ServiceFullyName
-	if c.stubs[key] != nil {
-		stub := c.stubs[key]
-		if stub.host == req.Host {
-			return c.stubs[key], nil
-		}
-		stub.conn.Close()
-		c.stubs[key] = nil
-	}
+func (c *Client) closeStream(req *RequestData) {
+	runtime.EventsEmit(c.ctx, "end", req.Id)
+}
 
+func (c *Client) createStub(req *RequestData, write chan interface{}, stopRead chan string, stopWrite chan string) (*ClientStub, error) {
 	//  parse proto
 	proto, err := parse(req.ProtoPath)
 	handleError(req.Id, err)
@@ -129,14 +143,36 @@ func (c *Client) createStub(req *RequestData) (*ClientStub, error) {
 	// create stub
 	stub := grpcdynamic.NewStub(conn)
 
-	c.stubs[key] = &ClientStub{
-		host: req.Host, stub: &stub, conn: conn, proto: proto,
+	cliStub := &ClientStub{
+		host:  req.Host,
+		stub:  &stub,
+		conn:  conn,
+		proto: proto,
 	}
-	return c.stubs[key], nil
+
+	if write != nil {
+		cliStub.write = write
+	}
+	if stopRead != nil {
+		cliStub.stopRead = stopRead
+	}
+	if stopWrite != nil {
+		cliStub.stopWrite = stopWrite
+	}
+	c.stubs[req.Id] = cliStub
+	return c.stubs[req.Id], nil
 }
 
-func (c *Client) invokeUnary(req RequestData) *ResponseData {
-	stub, err := c.createStub(&req)
+func (c *Client) closeStub(req *RequestData) {
+	stub := c.stubs[req.Id]
+	if stub != nil {
+		stub.Close(req.Id)
+		delete(c.stubs, req.Id)
+	}
+}
+
+func (c *Client) invokeUnary(req *RequestData) *ResponseData {
+	stub, err := c.createStub(req, nil, nil, nil)
 	handleError(req.Id, err)
 
 	methodDesc := stub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
@@ -158,11 +194,12 @@ func (c *Client) invokeUnary(req RequestData) *ResponseData {
 	respMsg.ConvertFrom(resp)
 	log.Printf("resp :%s %s ", respMsg, trailer)
 	c.returnReponse(req.Id, respMsg, trailer, nil)
+	c.closeStub(req)
 	return nil
 }
 
-func (c *Client) invokeServerStream(req RequestData) *ResponseData {
-	stub, err := c.createStub(&req)
+func (c *Client) invokeServerStream(req *RequestData) *ResponseData {
+	stub, err := c.createStub(req, nil, make(chan string, 1), nil)
 	handleError(req.Id, err)
 
 	methodDesc := stub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
@@ -175,12 +212,12 @@ func (c *Client) invokeServerStream(req RequestData) *ResponseData {
 	serverStream, err := stub.stub.InvokeRpcServerStream(context.Background(), methodDesc, reqMsg)
 	handleError(req.Id, err)
 
-	go c.readStream(serverStream, respDesc, req.Id)
+	go c.readStream(serverStream, respDesc, req)
 	return nil
 }
 
-func (c *Client) invokeClientStream(req RequestData) *ResponseData {
-	stub, err := c.createStub(&req)
+func (c *Client) invokeClientStream(req *RequestData) *ResponseData {
+	stub, err := c.createStub(req, make(chan interface{}, 1), nil, make(chan string, 1))
 	handleError(req.Id, err)
 
 	methodDesc := stub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
@@ -191,7 +228,7 @@ func (c *Client) invokeClientStream(req RequestData) *ResponseData {
 	reqMsg.UnmarshalMergeJSON([]byte(req.Body))
 
 	if stub.call != nil {
-		c.write <- reqMsg
+		stub.write <- reqMsg
 		return nil
 	}
 
@@ -201,15 +238,15 @@ func (c *Client) invokeClientStream(req RequestData) *ResponseData {
 
 	// cache clientStream
 	stub.call = clientStream
-	go c.writeStream(clientStream, respDesc, req.Id)
+	go c.writeStream(clientStream, respDesc, req)
 
-	c.write <- reqMsg
+	stub.write <- reqMsg
 	return nil
 
 }
 
-func (c *Client) invokeBidirectionalStream(req RequestData) *ResponseData {
-	stub, err := c.createStub(&req)
+func (c *Client) invokeBidirectionalStream(req *RequestData) *ResponseData {
+	stub, err := c.createStub(req, make(chan interface{}, 1), make(chan string, 1), make(chan string, 1))
 	handleError(req.Id, err)
 
 	methodDesc := stub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
@@ -220,7 +257,7 @@ func (c *Client) invokeBidirectionalStream(req RequestData) *ResponseData {
 	reqMsg.UnmarshalMergeJSON([]byte(req.Body))
 
 	if stub.call != nil {
-		c.write <- reqMsg
+		stub.write <- reqMsg
 		return nil
 	}
 
@@ -230,93 +267,93 @@ func (c *Client) invokeBidirectionalStream(req RequestData) *ResponseData {
 
 	// cache clientStream
 	stub.call = bidiStream
-	go c.readStream(bidiStream, respDesc, req.Id)
-	go c.writeStream(bidiStream, respDesc, req.Id)
+	go c.readStream(bidiStream, respDesc, req)
+	go c.writeStream(bidiStream, respDesc, req)
 
-	c.write <- reqMsg
+	stub.write <- reqMsg
 	return nil
 }
 
-func (c *Client) readStream(stream interface{}, respDesc *desc.MessageDescriptor, reqId string) {
+func (c *Client) readStream(stream interface{}, respDesc *desc.MessageDescriptor, req *RequestData) {
 	respMsg := dynamic.NewMessage(respDesc)
 	serverStream, isServerStream := stream.(*grpcdynamic.ServerStream)
 	bidiStream, isBidiStream := stream.(*grpcdynamic.BidiStream)
+	stub := c.stubs[req.Id]
 	for {
 		respMsg.Reset()
 		select {
-		case id := <-c.stop:
-			if reqId == id {
-				return
+		case id := <-stub.stopRead:
+			if req.Id != id {
+				continue
 			}
-			// if isServerStream {
-			// 	// TODO
-			// }
 			if isBidiStream {
 				err := bidiStream.CloseSend()
-				handleError(reqId, err)
-				c.returnReponse(reqId, nil, bidiStream.Trailer(), nil)
+				handleError(req.Id, err)
+				c.returnReponse(req.Id, nil, bidiStream.Trailer(), nil)
 			}
-
+			c.closeStream(req)
+			return
 		default:
 			var msg protoiface.MessageV1
 			var err error
 			if isServerStream {
 				msg, err = serverStream.RecvMsg()
 				if err == io.EOF {
-					c.returnReponse(reqId, nil, serverStream.Trailer(), nil)
+					c.returnReponse(req.Id, nil, serverStream.Trailer(), nil)
 					return
 				}
-
 			}
 			if isBidiStream {
 				msg, err = bidiStream.RecvMsg()
 				if err == io.EOF {
-					c.returnReponse(reqId, nil, bidiStream.Trailer(), nil)
+					c.returnReponse(req.Id, nil, bidiStream.Trailer(), nil)
 					return
 				}
 			}
 
-			handleError(reqId, err)
+			handleError(req.Id, err)
 			respMsg.ConvertFrom(msg)
-			c.returnReponse(reqId, respMsg, nil, nil)
+			c.returnReponse(req.Id, respMsg, nil, nil)
 		}
 	}
 }
 
-func (c *Client) writeStream(stream interface{}, respDesc *desc.MessageDescriptor, reqId string) {
+func (c *Client) writeStream(stream interface{}, respDesc *desc.MessageDescriptor, req *RequestData) {
 	respMsg := dynamic.NewMessage(respDesc)
 	clientStream, isClientStream := stream.(*grpcdynamic.ClientStream)
 	bidiStream, isBidiStream := stream.(*grpcdynamic.BidiStream)
+	stub := c.stubs[req.Id]
 	for {
 		respMsg.Reset()
 
 		select {
-		case id := <-c.stop:
-			if reqId != id {
+		case id := <-stub.stopWrite:
+			if req.Id != id {
 				continue
 			}
 
 			if isClientStream {
 				msg, err := clientStream.CloseAndReceive()
-				handleError(reqId, err)
+				handleError(req.Id, err)
 				respMsg.ConvertFrom(msg)
-				c.returnReponse(reqId, respMsg, clientStream.Trailer(), nil)
+				c.returnReponse(req.Id, respMsg, clientStream.Trailer(), nil)
 			}
 
 			if isBidiStream {
 				err := bidiStream.CloseSend()
-				handleError(reqId, err)
-				c.returnReponse(reqId, nil, bidiStream.Trailer(), nil)
+				handleError(req.Id, err)
+				c.returnReponse(req.Id, nil, bidiStream.Trailer(), nil)
 			}
-
-		case reqData := <-c.write:
+			c.closeStream(req)
+			return
+		case reqData := <-stub.write:
 			if isClientStream {
 				err := clientStream.SendMsg(reqData.(protoiface.MessageV1))
-				handleError(reqId, err)
+				handleError(req.Id, err)
 			}
 			if isBidiStream {
 				err := bidiStream.SendMsg(reqData.(protoiface.MessageV1))
-				handleError(reqId, err)
+				handleError(req.Id, err)
 			}
 		}
 	}

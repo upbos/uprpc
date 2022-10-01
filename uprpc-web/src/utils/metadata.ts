@@ -1,6 +1,5 @@
 import { ParseType } from "../types/types";
 import { Base64 } from "js-base64";
-import Base from "antd/lib/typography/Base";
 export function encode(value: any, parseType: number) {
     if (ParseType.Text == parseType) {
         return Base64.encode(value);

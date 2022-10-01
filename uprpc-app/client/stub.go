@@ -3,14 +3,15 @@ package client
 import (
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
 
 type ClientStub struct {
 	Id        string
 	host      string
-	stub      *grpcdynamic.Stub
 	conn      *grpc.ClientConn
+	stub      *grpcdynamic.Stub
 	proto     *desc.FileDescriptor
 	call      interface{}
 	write     chan interface{}
@@ -22,33 +23,28 @@ type ClientStub struct {
 func CreateStub(req *RequestData, write chan interface{}, stopRead chan string, stopWrite chan string) (*ClientStub, error) {
 	//  parse proto
 	proto, err := parse(req.ProtoPath)
-	handleError(req.Id, err)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse proto error")
+	}
 
 	// create connect
 	conn, err := grpc.Dial(req.Host, grpc.WithInsecure())
-	handleError(req.Id, err)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse proto error")
+	}
 
 	// create stub
 	stub := grpcdynamic.NewStub(conn)
-
-	cliStub := &ClientStub{
-		Id:    req.Id,
-		host:  req.Host,
-		stub:  &stub,
-		conn:  conn,
-		proto: proto,
-	}
-
-	if write != nil {
-		cliStub.write = write
-	}
-	if stopRead != nil {
-		cliStub.stopRead = stopRead
-	}
-	if stopWrite != nil {
-		cliStub.stopWrite = stopWrite
-	}
-	return cliStub, nil
+	return &ClientStub{
+		Id:        req.Id,
+		host:      req.Host,
+		conn:      conn,
+		stub:      &stub,
+		proto:     proto,
+		write:     write,
+		stopRead:  stopRead,
+		stopWrite: stopWrite,
+	}, nil
 }
 
 func (c *ClientStub) Close() {

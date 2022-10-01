@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
@@ -22,7 +19,7 @@ import (
 type Metadata struct {
 	Id        int8   `json:"id,omitempty"`
 	Key       string `json:"key,omitempty"`
-	Value     []byte `json:"value,omomitempty"`
+	Value     string `json:"value,omomitempty"`
 	ParseType int8   `json:"parseType,omitempty"`
 }
 
@@ -95,7 +92,11 @@ func (c *Client) Stop(id string) {
 
 func (c *Client) openStub(req *RequestData, write chan interface{}, stopRead chan string, stopWrite chan string) *ClientStub {
 	stub, err := CreateStub(req, write, stopRead, stopWrite)
-	handleError(req.Id, err)
+	if err != nil {
+		log.Printf("open stub failed")
+		return nil
+	}
+
 	c.stubs[req.Id] = stub
 	return stub
 }
@@ -124,14 +125,13 @@ func (c *Client) invokeUnary(req *RequestData) *ResponseData {
 	reqMsg.UnmarshalMergeJSON([]byte(req.Body))
 	resp, err := cliStub.stub.InvokeRpc(ctx, methodDesc, reqMsg, grpc.Trailer(&trailer))
 	if err != nil {
-		c.returnReponse(req.Id, nil, ParseMetadata(trailer), err)
+		c.emitReponse(req.Id, nil, ParseMetadata(trailer), err)
 		return nil
 	}
 
 	respMsg := dynamic.NewMessage(respDesc)
 	respMsg.ConvertFrom(resp)
-	log.Printf("resp :%s %s ", respMsg, trailer)
-	c.returnReponse(req.Id, respMsg, ParseMetadata(trailer), nil)
+	c.emitReponse(req.Id, respMsg, ParseMetadata(trailer), nil)
 	c.closeStub(cliStub)
 	return nil
 }
@@ -149,7 +149,10 @@ func (c *Client) invokeServerStream(req *RequestData) *ResponseData {
 	reqMsg := dynamic.NewMessage(reqDesc)
 	reqMsg.UnmarshalMergeJSON([]byte(req.Body))
 	serverStream, err := cliStub.stub.InvokeRpcServerStream(ctx, methodDesc, reqMsg)
-	handleError(req.Id, err)
+	if err != nil {
+		c.emitReponse(req.Id, nil, nil, err)
+		return nil
+	}
 
 	go c.readStream(cliStub, serverStream, respDesc, req)
 	return nil
@@ -173,7 +176,10 @@ func (c *Client) invokeClientStream(req *RequestData) *ResponseData {
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 	// create new call for method
 	clientStream, err := cliStub.stub.InvokeRpcClientStream(ctx, methodDesc)
-	handleError(req.Id, err)
+	if err != nil {
+		c.emitReponse(req.Id, nil, nil, err)
+		return nil
+	}
 
 	// cache clientStream
 	cliStub.call = clientStream
@@ -204,7 +210,10 @@ func (c *Client) invokeBidirectionalStream(req *RequestData) *ResponseData {
 
 	// create new call for method
 	bidiStream, err := cliStub.stub.InvokeRpcBidiStream(ctx, methodDesc)
-	handleError(req.Id, err)
+	if err != nil {
+		c.emitReponse(req.Id, nil, nil, err)
+		return nil
+	}
 
 	// cache clientStream
 	cliStub.call = bidiStream
@@ -216,86 +225,100 @@ func (c *Client) invokeBidirectionalStream(req *RequestData) *ResponseData {
 }
 
 func (c *Client) readStream(cliStub *ClientStub, stream interface{}, respDesc *desc.MessageDescriptor, req *RequestData) {
+	defer func() {
+		c.emitClose(req)
+		c.closeStub(cliStub)
+	}()
+
 	respMsg := dynamic.NewMessage(respDesc)
 	serverStream, isServerStream := stream.(*grpcdynamic.ServerStream)
 	bidiStream, isBidiStream := stream.(*grpcdynamic.BidiStream)
+
 	for {
 		respMsg.Reset()
 		select {
 		case <-cliStub.stopRead:
-			if isServerStream {
-				c.returnReponse(req.Id, nil, ParseMetadata(serverStream.Trailer()), nil)
-				c.returnClose(req)
-				c.closeStub(cliStub)
-			}
 			return
 		default:
 			var msg protoiface.MessageV1
 			var err error
+
 			if isServerStream {
 				msg, err = serverStream.RecvMsg()
 				if err == io.EOF {
-					c.returnReponse(req.Id, nil, ParseMetadata(serverStream.Trailer()), nil)
-					c.returnClose(req)
-					c.closeStub(cliStub)
-					return
-				}
-			}
-			if isBidiStream && !cliStub.Closed {
-				msg, err = bidiStream.RecvMsg()
-				if err == io.EOF {
-					c.returnReponse(req.Id, nil, ParseMetadata(bidiStream.Trailer()), nil)
-					c.returnClose(req)
-					c.closeStub(cliStub)
+					c.emitReponse(req.Id, nil, ParseMetadata(serverStream.Trailer()), nil)
 					return
 				}
 			}
 
-			handleError(req.Id, err)
+			if isBidiStream && !cliStub.Closed {
+				msg, err = bidiStream.RecvMsg()
+				if err == io.EOF {
+					c.emitReponse(req.Id, nil, ParseMetadata(bidiStream.Trailer()), nil)
+					return
+				}
+			}
+
+			if err != nil {
+				c.emitReponse(req.Id, nil, nil, err)
+				continue
+			}
+
 			respMsg.ConvertFrom(msg)
-			c.returnReponse(req.Id, respMsg, nil, nil)
+			c.emitReponse(req.Id, respMsg, nil, nil)
 		}
 	}
 }
 
 func (c *Client) writeStream(cliStub *ClientStub, stream interface{}, respDesc *desc.MessageDescriptor, req *RequestData) {
+	defer func() {
+		c.emitClose(req)
+		c.closeStub(cliStub)
+	}()
+
 	respMsg := dynamic.NewMessage(respDesc)
 	clientStream, isClientStream := stream.(*grpcdynamic.ClientStream)
 	bidiStream, isBidiStream := stream.(*grpcdynamic.BidiStream)
+
+	var (
+		msg protoiface.MessageV1
+		err error
+	)
 	for {
 		respMsg.Reset()
-
 		select {
 		case <-cliStub.stopWrite:
 			if isClientStream {
-				msg, err := clientStream.CloseAndReceive()
-				handleError(req.Id, err)
+				msg, err = clientStream.CloseAndReceive()
+				if err != nil {
+					log.Printf("close client write stream failed: %v", err)
+					return
+				}
 				respMsg.ConvertFrom(msg)
-				c.returnReponse(req.Id, respMsg, ParseMetadata(clientStream.Trailer()), nil)
+				c.emitReponse(req.Id, respMsg, ParseMetadata(clientStream.Trailer()), nil)
 			}
 
 			if isBidiStream && !cliStub.Closed {
-				err := bidiStream.CloseSend()
-				handleError(req.Id, err)
-				c.returnReponse(req.Id, nil, ParseMetadata(bidiStream.Trailer()), nil)
+				err = bidiStream.CloseSend()
+				if err != nil {
+					log.Printf("close bidi write stream failed: %v", err)
+					return
+				}
+				c.emitReponse(req.Id, nil, ParseMetadata(bidiStream.Trailer()), nil)
 			}
-			c.returnClose(req)
-			c.closeStub(cliStub)
 			return
 		case reqData := <-cliStub.write:
 			if isClientStream {
-				err := clientStream.SendMsg(reqData.(protoiface.MessageV1))
-				handleError(req.Id, err)
+				clientStream.SendMsg(reqData.(protoiface.MessageV1))
 			}
 			if isBidiStream && !cliStub.Closed {
-				err := bidiStream.SendMsg(reqData.(protoiface.MessageV1))
-				handleError(req.Id, err)
+				bidiStream.SendMsg(reqData.(protoiface.MessageV1))
 			}
 		}
 	}
 }
 
-func (c *Client) returnReponse(id string, data *dynamic.Message, mds []Metadata, err error) {
+func (c *Client) emitReponse(id string, data *dynamic.Message, mds []Metadata, err error) {
 	var body string
 	if data != nil {
 		byte, _ := data.MarshalJSON()
@@ -313,25 +336,15 @@ func (c *Client) returnReponse(id string, data *dynamic.Message, mds []Metadata,
 	runtime.EventsEmit(c.ctx, "data", respData)
 }
 
-func (c *Client) returnClose(req *RequestData) {
+func (c *Client) emitClose(req *RequestData) {
 	log.Printf("retrun close data: %v", req.Id)
 	runtime.EventsEmit(c.ctx, "end", req.Id)
-}
-func handleError(id string, err error) {
-	if err != nil {
-		// log.Panic(id + "@@" + err.Error())
-		log.Printf("ss:%s", err.Error())
-	}
 }
 
 func (c *Client) recovery() {
 	err := recover()
 	if err != nil {
 		log.Printf("Recovery:%s", err)
-		if idx := strings.Index(err.(string), "@@"); idx != -1 {
-			c.returnReponse(err.(string)[:idx], nil, nil, errors.New(err.(string)[idx+2:]))
-			return
-		}
 	}
 }
 

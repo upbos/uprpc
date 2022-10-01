@@ -19,7 +19,7 @@ func ParseMetadata(metadata metadata.MD) []Metadata {
 			mds = append(mds, Metadata{
 				Id:    int8(len(mds) + 1),
 				Key:   key,
-				Value: []byte(v),
+				Value: v,
 			})
 		}
 	}

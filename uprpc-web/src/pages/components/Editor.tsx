@@ -47,10 +47,7 @@ const editor = ({proto, method: initMethod}: EditorProp) => {
         let requestMds: Metadata[] = [];
         if (method.requestMds != null && method.requestMds.length > 0) {
             requestMds = method.requestMds.map((md, index) => {
-                if (md.key.endsWith('-bin')) {
-                    return {...md, key: md.key, value: encode(md.value, md.parseType)}
-                }
-                return {...md, key: md.key, value: md.value}
+                return {...md, key: md.key, value: encode(md.value, md.parseType)}
             })
         }
         return {

@@ -7,6 +7,7 @@ import (
 )
 
 type ClientStub struct {
+	Id        string
 	host      string
 	stub      *grpcdynamic.Stub
 	conn      *grpc.ClientConn
@@ -15,6 +16,7 @@ type ClientStub struct {
 	write     chan interface{}
 	stopRead  chan string
 	stopWrite chan string
+	Closed    bool
 }
 
 func CreateStub(req *RequestData, write chan interface{}, stopRead chan string, stopWrite chan string) (*ClientStub, error) {
@@ -30,6 +32,7 @@ func CreateStub(req *RequestData, write chan interface{}, stopRead chan string, 
 	stub := grpcdynamic.NewStub(conn)
 
 	cliStub := &ClientStub{
+		Id:    req.Id,
 		host:  req.Host,
 		stub:  &stub,
 		conn:  conn,
@@ -48,7 +51,11 @@ func CreateStub(req *RequestData, write chan interface{}, stopRead chan string, 
 	return cliStub, nil
 }
 
-func (c *ClientStub) Close(id string) {
+func (c *ClientStub) Close() {
+	if c.Closed {
+		return
+	}
+
 	c.conn.Close()
 	if c.stopRead != nil {
 		close(c.stopRead)
@@ -59,4 +66,5 @@ func (c *ClientStub) Close(id string) {
 	if c.stopWrite != nil {
 		close(c.stopWrite)
 	}
+	c.Closed = true
 }

@@ -5,12 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path"
+
 	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
 	uuid "github.com/satori/go.uuid"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
-	"path"
 )
 
 var b2i = map[bool]int8{false: 0, true: 1}

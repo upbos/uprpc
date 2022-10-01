@@ -39,7 +39,8 @@ export class HelloWorldService {
         console.log("sayHelloSimpleError 收到客户端请求：", call.request.name);
         // parse request metadata
         let callId = call.metadata.get("callId");
-        console.log("callId=", callId);
+        let codebin = call.metadata.get("code-bin");
+        console.log("callId=", callId, Buffer.from(codebin).toString());
         let s = 233;
         let code1: Buffer = Buffer.alloc(8);
         code1.writeIntLE(s, 0, 2);

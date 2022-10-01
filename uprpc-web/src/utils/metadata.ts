@@ -1,8 +1,9 @@
-import {ParseType} from "../types/types";
-
+import { ParseType } from "../types/types";
+import { Base64 } from "js-base64";
+import Base from "antd/lib/typography/Base";
 export function encode(value: any, parseType: number) {
     if (ParseType.Text == parseType) {
-        return new TextEncoder().encode(value);
+        return Base64.encode(value);
     }
 
     let view = new DataView(new ArrayBuffer(16));
@@ -66,16 +67,18 @@ export function encode(value: any, parseType: number) {
             view.setBigInt64(0, value, false);
             break;
     }
-    return view;
+    return Base64.encode(value);
 }
 
 export function decode(value: any, parseType: number): any {
-    if (ParseType.Text == parseType) {
-        return new TextDecoder().decode(value);
-    }
-
-    const view = new DataView(value.buffer, value.byteOffset, value.byteLength);
     try {
+        value = Base64.toUint8Array(value);
+        if (ParseType.Text == parseType) {
+            let strValue = new TextDecoder().decode(value);
+            return strValue;
+        }
+
+        const view = new DataView(value.buffer, value.byteOffset, value.byteLength);
         switch (parseType) {
             // case ParseType.IntLE:
             // case ParseType.IntBE:

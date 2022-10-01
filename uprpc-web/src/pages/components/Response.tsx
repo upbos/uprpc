@@ -44,11 +44,8 @@ export default ({method, responseCache, onChange}: responseProps) => {
         {title: 'KEY', dataIndex: 'key', key: 'name', width: '200px'},
         {
             title: 'VALUE', dataIndex: 'value', key: 'value', render: function (title: string, record: any) {
-                if (/-bin$/.test(record.key)) {
-                    return <BufferValue id={record.id} value={record.value} parseType={getParseType(record.id)}
+                return <BufferValue id={record.id} value={record.value} parseType={getParseType(record.id)}
                                         onChange={(id, parseType) => handleChange(id, record.key, parseType)}/>
-                }
-                return title;
             }
         }
     ];

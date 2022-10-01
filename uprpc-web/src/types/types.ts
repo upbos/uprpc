@@ -59,7 +59,7 @@ export const parseTypeMap: Map<number, string> = new Map([
 export interface Metadata {
     id: number;
     key: string;
-    value?: any;
+    value?: string;
     parseType: ParseType;
 }
 
@@ -100,8 +100,8 @@ export const modeMap = {
 
 export interface Method {
     id: string;
-    namespace: string,
-    serviceName: string,
+    namespace: string;
+    serviceName: string;
     serviceFullyName: string;
     name: string;
     mode: Mode;
@@ -109,7 +109,6 @@ export interface Method {
     requestMds?: Metadata[];
     responseMds?: Metadata[];
 }
-
 
 export interface Proto {
     name: string;

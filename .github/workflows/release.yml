@@ -57,10 +57,10 @@ jobs:
               run: |
                   echo "Signing Package"
                   cd ./uprpc-app
-                  gon -log-level=info ./scripts/mac-sign.json
                   mkdir ./build/release
-                  cd ./build/bin
-                  zip -r ../release/uprpc-arm64.zip ./
+                  gon -log-level=info ./scripts/mac-sign.json               
+                  # cd ./build/bin
+                  # zip -r ../release/uprpc-arm64.zip ./
 
             - name: upload artifacts macOS
               if: matrix.platform == 'macos-latest'

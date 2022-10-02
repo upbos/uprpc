@@ -1,6 +1,8 @@
 package client
 
 import (
+	"sync"
+
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
 	"github.com/pkg/errors"
@@ -16,6 +18,7 @@ type ClientStub struct {
 	call   interface{}
 	write  chan interface{}
 	stop   chan string
+	Wait   sync.WaitGroup
 	Closed bool
 }
 

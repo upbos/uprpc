@@ -19,7 +19,7 @@ import (
 type Metadata struct {
 	Id        int8   `json:"id,omitempty"`
 	Key       string `json:"key,omitempty"`
-	Value     string `json:"value,omomitempty"`
+	Value     []byte `json:"value,omomitempty"`
 	ParseType int8   `json:"parseType,omitempty"`
 }
 
@@ -81,27 +81,23 @@ func (c *Client) Send(req *RequestData) {
 func (c *Client) Stop(id string) {
 	stub := c.stubs[id]
 	if stub != nil {
-		if stub.stopRead != nil {
-			stub.stopRead <- id
-		}
-		if stub.stopWrite != nil {
-			stub.stopWrite <- id
+		if stub.stop != nil {
+			stub.stop <- id
 		}
 	}
 }
 
-func (c *Client) openStub(req *RequestData, write chan interface{}, stopRead chan string, stopWrite chan string) *ClientStub {
-	stub, err := CreateStub(req, write, stopRead, stopWrite)
-	if err != nil {
-		log.Printf("open stub failed")
-		return nil
+func (c *Client) openStub(req *RequestData, write chan interface{}, stop chan string) *ClientStub {
+	stub := c.stubs[req.Id]
+	if stub == nil {
+		stub, _ = CreateStub(req, write, stop)
+		c.stubs[req.Id] = stub
 	}
-
-	c.stubs[req.Id] = stub
 	return stub
 }
 
 func (c *Client) closeStub(cliStub *ClientStub) {
+	log.Printf("close stub: %v", cliStub)
 	if cliStub != nil {
 		cliStub.Close()
 		delete(c.stubs, cliStub.Id)
@@ -109,7 +105,7 @@ func (c *Client) closeStub(cliStub *ClientStub) {
 }
 
 func (c *Client) invokeUnary(req *RequestData) *ResponseData {
-	cliStub := c.openStub(req, nil, nil, nil)
+	cliStub := c.openStub(req, nil, nil)
 	methodDesc := cliStub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
 	respDesc := methodDesc.GetOutputType()
@@ -137,7 +133,7 @@ func (c *Client) invokeUnary(req *RequestData) *ResponseData {
 }
 
 func (c *Client) invokeServerStream(req *RequestData) *ResponseData {
-	cliStub := c.openStub(req, nil, make(chan string, 1), nil)
+	cliStub := c.openStub(req, nil, make(chan string, 1))
 	methodDesc := cliStub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
 	respDesc := methodDesc.GetOutputType()
@@ -151,6 +147,8 @@ func (c *Client) invokeServerStream(req *RequestData) *ResponseData {
 	serverStream, err := cliStub.stub.InvokeRpcServerStream(ctx, methodDesc, reqMsg)
 	if err != nil {
 		c.emitReponse(req.Id, nil, nil, err)
+		c.emitClose(req)
+		c.closeStub(cliStub)
 		return nil
 	}
 
@@ -159,7 +157,7 @@ func (c *Client) invokeServerStream(req *RequestData) *ResponseData {
 }
 
 func (c *Client) invokeClientStream(req *RequestData) *ResponseData {
-	cliStub := c.openStub(req, make(chan interface{}, 1), nil, make(chan string, 1))
+	cliStub := c.openStub(req, make(chan interface{}, 1), make(chan string, 1))
 	methodDesc := cliStub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
 	respDesc := methodDesc.GetOutputType()
@@ -178,6 +176,8 @@ func (c *Client) invokeClientStream(req *RequestData) *ResponseData {
 	clientStream, err := cliStub.stub.InvokeRpcClientStream(ctx, methodDesc)
 	if err != nil {
 		c.emitReponse(req.Id, nil, nil, err)
+		c.emitClose(req)
+		c.closeStub(cliStub)
 		return nil
 	}
 
@@ -191,7 +191,7 @@ func (c *Client) invokeClientStream(req *RequestData) *ResponseData {
 }
 
 func (c *Client) invokeBidirectionalStream(req *RequestData) *ResponseData {
-	cliStub := c.openStub(req, make(chan interface{}, 1), make(chan string, 1), make(chan string, 1))
+	cliStub := c.openStub(req, make(chan interface{}, 1), make(chan string, 1))
 	methodDesc := cliStub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
 	respDesc := methodDesc.GetOutputType()
@@ -212,6 +212,8 @@ func (c *Client) invokeBidirectionalStream(req *RequestData) *ResponseData {
 	bidiStream, err := cliStub.stub.InvokeRpcBidiStream(ctx, methodDesc)
 	if err != nil {
 		c.emitReponse(req.Id, nil, nil, err)
+		c.emitClose(req)
+		c.closeStub(cliStub)
 		return nil
 	}
 
@@ -225,43 +227,44 @@ func (c *Client) invokeBidirectionalStream(req *RequestData) *ResponseData {
 }
 
 func (c *Client) readStream(cliStub *ClientStub, stream interface{}, respDesc *desc.MessageDescriptor, req *RequestData) {
-	defer func() {
-		c.emitClose(req)
-		c.closeStub(cliStub)
-	}()
+	defer c.closeStub(cliStub)
 
 	respMsg := dynamic.NewMessage(respDesc)
 	serverStream, isServerStream := stream.(*grpcdynamic.ServerStream)
 	bidiStream, isBidiStream := stream.(*grpcdynamic.BidiStream)
 
+	var msg protoiface.MessageV1
+	var err error
 	for {
 		respMsg.Reset()
 		select {
-		case <-cliStub.stopRead:
+		case <-cliStub.stop:
+			log.Printf("start close bidi read stream: %v", req.Id)
 			return
 		default:
-			var msg protoiface.MessageV1
-			var err error
-
 			if isServerStream {
+				// block until response is received
 				msg, err = serverStream.RecvMsg()
 				if err == io.EOF {
 					c.emitReponse(req.Id, nil, ParseMetadata(serverStream.Trailer()), nil)
+					c.emitClose(req)
 					return
 				}
 			}
 
 			if isBidiStream && !cliStub.Closed {
+				// block until response is received
 				msg, err = bidiStream.RecvMsg()
 				if err == io.EOF {
 					c.emitReponse(req.Id, nil, ParseMetadata(bidiStream.Trailer()), nil)
+					// c.emitClose(req)
 					return
 				}
 			}
 
 			if err != nil {
 				c.emitReponse(req.Id, nil, nil, err)
-				continue
+				return
 			}
 
 			respMsg.ConvertFrom(msg)
@@ -271,10 +274,7 @@ func (c *Client) readStream(cliStub *ClientStub, stream interface{}, respDesc *d
 }
 
 func (c *Client) writeStream(cliStub *ClientStub, stream interface{}, respDesc *desc.MessageDescriptor, req *RequestData) {
-	defer func() {
-		c.emitClose(req)
-		c.closeStub(cliStub)
-	}()
+	defer c.closeStub(cliStub)
 
 	respMsg := dynamic.NewMessage(respDesc)
 	clientStream, isClientStream := stream.(*grpcdynamic.ClientStream)
@@ -287,7 +287,8 @@ func (c *Client) writeStream(cliStub *ClientStub, stream interface{}, respDesc *
 	for {
 		respMsg.Reset()
 		select {
-		case <-cliStub.stopWrite:
+		case <-cliStub.stop:
+			log.Printf("start close bidi write stream: %v", req.Id)
 			if isClientStream {
 				msg, err = clientStream.CloseAndReceive()
 				if err != nil {
@@ -296,6 +297,7 @@ func (c *Client) writeStream(cliStub *ClientStub, stream interface{}, respDesc *
 				}
 				respMsg.ConvertFrom(msg)
 				c.emitReponse(req.Id, respMsg, ParseMetadata(clientStream.Trailer()), nil)
+				c.emitClose(req)
 			}
 
 			if isBidiStream && !cliStub.Closed {
@@ -304,7 +306,7 @@ func (c *Client) writeStream(cliStub *ClientStub, stream interface{}, respDesc *
 					log.Printf("close bidi write stream failed: %v", err)
 					return
 				}
-				c.emitReponse(req.Id, nil, ParseMetadata(bidiStream.Trailer()), nil)
+				c.emitClose(req)
 			}
 			return
 		case reqData := <-cliStub.write:

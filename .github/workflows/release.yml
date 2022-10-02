@@ -58,13 +58,15 @@ jobs:
                   echo "Signing Package"
                   cd ./uprpc-app
                   gon -log-level=info ./scripts/mac-sign.json
+                  mkdir ./build/release
+                  zip -r ./build/release/uprpc-arm64.zip ./build/bin
 
             - name: upload artifacts macOS
               if: matrix.platform == 'macos-latest'
               uses: actions/upload-artifact@v2
               with:
-                  name: ${{ matrix.os }}
-                  path: uprpc-app/build/bin/*
+                  name: ${{ matrix.platform }}
+                  path: uprpc-app/build/release/*
 
             - name: Sign Windows binaries
               if: matrix.platform == 'windows-latest'
@@ -80,13 +82,13 @@ jobs:
               if: matrix.platform == 'windows-latest'
               uses: actions/upload-artifact@v2
               with:
-                  name: ${{ matrix.os }}
-                  path: uprpc-app/build/bin/*
+                  name: ${{ matrix.platform }}
+                  path: uprpc-app/build/release/*
 
             - name: release
               uses: softprops/action-gh-release@v0.1.14
               if: startsWith(github.ref, 'refs/tags/')
               with:
-                  files: "uprpc-app/build/bin/**"
+                  files: "uprpc-app/build/release/**"
               env:
                   GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}

@@ -83,7 +83,7 @@ func parseMethod(services []*desc.ServiceDescriptor) []*Method {
 	for _, service := range services {
 		for _, method := range service.GetMethods() {
 			fieldValue := parseMessageFields(method.GetInputType())
-			str, err := json.Marshal(&fieldValue)
+			str, err := json.MarshalIndent(&fieldValue, "", "\t")
 			if err != nil {
 				fmt.Println(err)
 			}

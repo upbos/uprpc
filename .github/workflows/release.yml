@@ -59,7 +59,8 @@ jobs:
                   cd ./uprpc-app
                   gon -log-level=info ./scripts/mac-sign.json
                   mkdir ./build/release
-                  zip -r ./build/release/uprpc-arm64.zip ./build/bin
+                  cd ./build/bin
+                  zip -r ../release/uprpc-arm64.zip ./
 
             - name: upload artifacts macOS
               if: matrix.platform == 'macos-latest'

@@ -58,6 +58,8 @@ jobs:
                   echo "Signing Package"
                   cd ./uprpc-app
                   mkdir ./build/release
+                  APPLE_ID=${{ env.APPLE_ID }}
+                  APPLE_PASSWORD=${{ env.APPLE_PASSWORD }}
                   gon -log-level=info ./scripts/mac-sign.json               
                   # cd ./build/bin
                   # zip -r ../release/uprpc-arm64.zip ./

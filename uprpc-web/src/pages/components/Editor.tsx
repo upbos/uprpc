@@ -91,6 +91,7 @@ const editor = ({proto, method: initMethod}: EditorProp) => {
     let responseCache = protoStore.responseCaches.get(method.id);
     // @ts-ignore
     let running: boolean = protoStore.runningCaches.get(method.id);
+    console.log('running: ', running)
     return (
         <Layout style={{height: '100%', backgroundColor: 'white', padding: '0px 10px'}}>
             <Layout.Header className={styles.header} style={{paddingBottom: 10}}>

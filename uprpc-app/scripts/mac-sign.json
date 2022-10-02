@@ -1,0 +1,13 @@
+{
+  "source": [
+    "./build/bin/uprpc.app"
+  ],
+  "bundle_id": "com.upbos.uprpc",
+  "apple_id": {
+    "username": "@env:APPLE_ID",
+    "password": "@env:APPLE_PASSWORD"
+  },
+  "sign": {
+    "application_identity": "Apple Development: upboss@126.com (ZZ6F69879N)"
+  }
+}

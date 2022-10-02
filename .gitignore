@@ -4,3 +4,7 @@ build
 uprpc-app/frontend/
 uprpc-mock/dist/helloService.js
 uprpc-web/src/wailsjs/go/models.ts
+.DS_Store
+.DS_Store
+.DS_Store
+uprpc-app/.DS_Store

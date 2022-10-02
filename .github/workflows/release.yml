@@ -63,7 +63,7 @@ jobs:
               if: matrix.platform == 'macos-latest'
               uses: actions/upload-artifact@v2
               with:
-                  name: wails-binaries-macos
+                  name: ${{ matrix.os }}
                   path: uprpc-app/build/bin/*
 
             - name: Sign Windows binaries
@@ -80,5 +80,13 @@ jobs:
               if: matrix.platform == 'windows-latest'
               uses: actions/upload-artifact@v2
               with:
-                  name: wails-binaries-windows
+                  name: ${{ matrix.os }}
                   path: uprpc-app/build/bin/*
+
+            - name: release
+              uses: softprops/action-gh-release@v0.1.14
+              if: startsWith(github.ref, 'refs/tags/')
+              with:
+                  files: "uprpc-app/build/bin/**"
+              env:
+                  GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}

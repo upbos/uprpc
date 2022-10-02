@@ -79,11 +79,11 @@ func (c *Client) Send(req *RequestData) {
 }
 
 func (c *Client) Stop(id string) {
-	stub := c.stubs[id]
-	if stub != nil {
-		if stub.stop != nil {
-			stub.stop <- id
-		}
+	cliStub := c.stubs[id]
+	if cliStub != nil {
+		cliStub.stop <- id
+		cliStub.Wait.Wait()
+		c.closeStub(cliStub)
 	}
 }
 
@@ -152,6 +152,7 @@ func (c *Client) invokeServerStream(req *RequestData) *ResponseData {
 		return nil
 	}
 
+	cliStub.Wait.Add(1)
 	go c.readStream(cliStub, serverStream, respDesc, req)
 	return nil
 }
@@ -183,6 +184,7 @@ func (c *Client) invokeClientStream(req *RequestData) *ResponseData {
 
 	// cache clientStream
 	cliStub.call = clientStream
+	cliStub.Wait.Add(1)
 	go c.writeStream(cliStub, clientStream, respDesc, req)
 
 	cliStub.write <- reqMsg
@@ -219,6 +221,7 @@ func (c *Client) invokeBidirectionalStream(req *RequestData) *ResponseData {
 
 	// cache clientStream
 	cliStub.call = bidiStream
+	cliStub.Wait.Add(2)
 	go c.readStream(cliStub, bidiStream, respDesc, req)
 	go c.writeStream(cliStub, bidiStream, respDesc, req)
 
@@ -227,7 +230,9 @@ func (c *Client) invokeBidirectionalStream(req *RequestData) *ResponseData {
 }
 
 func (c *Client) readStream(cliStub *ClientStub, stream interface{}, respDesc *desc.MessageDescriptor, req *RequestData) {
-	defer c.closeStub(cliStub)
+	defer func() {
+		cliStub.Wait.Done()
+	}()
 
 	respMsg := dynamic.NewMessage(respDesc)
 	serverStream, isServerStream := stream.(*grpcdynamic.ServerStream)
@@ -247,6 +252,7 @@ func (c *Client) readStream(cliStub *ClientStub, stream interface{}, respDesc *d
 				msg, err = serverStream.RecvMsg()
 				if err == io.EOF {
 					c.emitReponse(req.Id, nil, ParseMetadata(serverStream.Trailer()), nil)
+					c.closeStub(cliStub)
 					c.emitClose(req)
 					return
 				}
@@ -256,13 +262,16 @@ func (c *Client) readStream(cliStub *ClientStub, stream interface{}, respDesc *d
 				// block until response is received
 				msg, err = bidiStream.RecvMsg()
 				if err == io.EOF {
+					log.Printf("read EOF: %v", err)
 					c.emitReponse(req.Id, nil, ParseMetadata(bidiStream.Trailer()), nil)
-					c.emitClose(req)
+					// c.emitClose(req)
+					// c.Stop(req.Id)
 					return
 				}
 			}
 
 			if err != nil {
+				log.Printf("read error: %v", err)
 				c.emitReponse(req.Id, nil, nil, err)
 				c.emitClose(req)
 				return
@@ -275,7 +284,9 @@ func (c *Client) readStream(cliStub *ClientStub, stream interface{}, respDesc *d
 }
 
 func (c *Client) writeStream(cliStub *ClientStub, stream interface{}, respDesc *desc.MessageDescriptor, req *RequestData) {
-	defer c.closeStub(cliStub)
+	defer func() {
+		cliStub.Wait.Done()
+	}()
 
 	respMsg := dynamic.NewMessage(respDesc)
 	clientStream, isClientStream := stream.(*grpcdynamic.ClientStream)

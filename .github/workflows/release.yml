@@ -41,6 +41,7 @@ jobs:
                   go install github.com/wailsapp/wails/v2/cmd/wails@latest
             - name: Build uprpc-app
               run: |
+                  cd ./uprpc-app
                   ./scripts/build-macos-arm.sh
 
             - name: Import Code-Signing Certificates for macOS
@@ -55,6 +56,7 @@ jobs:
               if: matrix.platform == 'macos-latest'
               run: |
                   echo "Signing Package"
+                  cd ./uprpc-app
                   gon -log-level=info ./scripts/mac-sign.json
 
             - name: upload artifacts macOS
@@ -62,7 +64,7 @@ jobs:
               uses: actions/upload-artifact@v2
               with:
                   name: wails-binaries-macos
-                  path: build/bin/*
+                  path: uprpc-app/build/bin/*
 
             - name: Sign Windows binaries
               if: matrix.platform == 'windows-latest'
@@ -79,4 +81,4 @@ jobs:
               uses: actions/upload-artifact@v2
               with:
                   name: wails-binaries-windows
-                  path: build/bin/*
+                  path: uprpc-app/build/bin/*

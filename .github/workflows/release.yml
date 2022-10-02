@@ -41,8 +41,8 @@ jobs:
                   go install github.com/wailsapp/wails/v2/cmd/wails@latest
             - name: Build uprpc-app
               run: |
-                  cd ./uprpc-app
-                  ./scripts/build-macos-arm.sh
+                  cd ./uprpc-app/scripts
+                  ./build-macos-arm.sh
 
             - name: Import Code-Signing Certificates for macOS
               if: matrix.platform == 'macos-latest'

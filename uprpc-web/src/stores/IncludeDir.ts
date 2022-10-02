@@ -1,5 +1,6 @@
 import {makeAutoObservable} from "mobx";
 import * as storage from "@/stores/localStorage";
+import {OpenIncludeDir} from "@/wailsjs/go/main/Api";
 
 export default class IncludeDirStore {
     constructor() {
@@ -20,7 +21,7 @@ export default class IncludeDirStore {
     }
 
     * addIncludeDir(): any {
-        let res = yield window.rpc.openIncludeDir()
+        let res = yield OpenIncludeDir()
         if (res.success) {
             storage.addIncludeDir(res.data);
             this.includeDirs = storage.listIncludeDir();

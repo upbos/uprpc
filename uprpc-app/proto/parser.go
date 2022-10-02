@@ -42,6 +42,13 @@ type Metadata struct {
 	ParseType int8   `json:"parseType,omitempty"`
 }
 
+func OpenIncludeDir(ctx context.Context) string {
+	selection, _ := runtime.OpenDirectoryDialog(ctx, runtime.OpenDialogOptions{
+		Title: "Import IncludeDirs",
+	})
+	return selection
+}
+
 func ImportFile(ctx context.Context) []string {
 	selection, _ := runtime.OpenMultipleFilesDialog(ctx, runtime.OpenDialogOptions{
 		Title: "Import File",
@@ -52,7 +59,6 @@ func ImportFile(ctx context.Context) []string {
 			},
 		},
 	})
-
 	return selection
 }
 

@@ -105,6 +105,9 @@ export class HelloWorldService {
         });
         call.on("end", (d: any) => {
             console.log("sayHelloDouble: end:", d);
+            let metadata = new Metadata();
+            metadata.add("status", "exited");
+            call.end(metadata);
         });
     }
 }

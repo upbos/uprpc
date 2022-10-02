@@ -3,7 +3,7 @@ export namespace client {
 	export class Metadata {
 	    id?: number;
 	    key?: string;
-	    value: number[];
+	    value: string;
 	    parseType?: number;
 	
 	    static createFrom(source: any = {}) {

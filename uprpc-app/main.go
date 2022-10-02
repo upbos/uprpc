@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"embed"
+	"fmt"
+	"net/http"
+	_ "net/http/pprof"
+
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 )
@@ -12,6 +16,11 @@ var assets embed.FS
 var gCtx context.Context
 
 func main() {
+
+	go func() {
+		fmt.Println("pprof start...")
+		fmt.Println(http.ListenAndServe(":9020", nil))
+	}()
 
 	newApi := newApi()
 	// Create application with options
@@ -34,4 +43,5 @@ func main() {
 	if err != nil {
 		println("Error:", err.Error())
 	}
+
 }

@@ -97,10 +97,10 @@ export default class ProtoStore {
     }
 
     * send(requestData: RequestData): any {
+        this.removeCache(requestData.id);
         if (requestData.methodMode != Mode.Unary) {
             this.runningCaches.set(requestData.id, true);
         }
-        this.removeCache(requestData.id);
         yield this.push(requestData);
     }
 

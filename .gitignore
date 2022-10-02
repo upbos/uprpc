@@ -2,3 +2,5 @@ node_modules
 build
 /uprpc-mock/dist
 uprpc-app/frontend/
+uprpc-mock/dist/helloService.js
+uprpc-web/src/wailsjs/go/models.ts

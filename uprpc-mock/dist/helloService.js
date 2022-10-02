@@ -38,7 +38,8 @@ class HelloWorldService {
         console.log("sayHelloSimpleError 收到客户端请求：", call.request.name);
         // parse request metadata
         let callId = call.metadata.get("callId");
-        console.log("callId=", callId);
+        let codebin = call.metadata.get("code-bin");
+        console.log("callId=", callId, Buffer.from(codebin).toString());
         let s = 233;
         let code1 = Buffer.alloc(8);
         code1.writeIntLE(s, 0, 2);
@@ -100,6 +101,9 @@ class HelloWorldService {
         });
         call.on("end", (d) => {
             console.log("sayHelloDouble: end:", d);
+            let metadata = new grpc_js_1.Metadata();
+            metadata.add("status", "exited");
+            call.end(metadata);
         });
     }
 }

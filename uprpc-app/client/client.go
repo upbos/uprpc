@@ -257,13 +257,14 @@ func (c *Client) readStream(cliStub *ClientStub, stream interface{}, respDesc *d
 				msg, err = bidiStream.RecvMsg()
 				if err == io.EOF {
 					c.emitReponse(req.Id, nil, ParseMetadata(bidiStream.Trailer()), nil)
-					// c.emitClose(req)
+					c.emitClose(req)
 					return
 				}
 			}
 
 			if err != nil {
 				c.emitReponse(req.Id, nil, nil, err)
+				c.emitClose(req)
 				return
 			}
 

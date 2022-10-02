@@ -57,7 +57,7 @@ export const parseTypeMap: Map<number, string> = new Map([
 ]);
 
 export interface Metadata {
-    id: number;
+    id: string;
     key: string;
     value?: string;
     parseType: ParseType;

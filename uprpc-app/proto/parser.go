@@ -36,7 +36,7 @@ type Method struct {
 }
 
 type Metadata struct {
-	Id        int8   `json:"id,omitempty"`
+	Id        string `json:"id,omitempty"`
 	Key       string `json:"key,omitempty"`
 	Value     string `json:"value,omitempty"`
 	ParseType int8   `json:"parseType,omitempty"`

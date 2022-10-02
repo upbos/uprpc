@@ -17,7 +17,7 @@ import (
 )
 
 type Metadata struct {
-	Id        int8   `json:"id,omitempty"`
+	Id        string `json:"id,omitempty"`
 	Key       string `json:"key,omitempty"`
 	Value     []byte `json:"value,omomitempty"`
 	ParseType int8   `json:"parseType,omitempty"`

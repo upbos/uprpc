@@ -9,12 +9,5 @@
   },
   "sign": {
     "application_identity": "Apple Development: upboss@126.com (ZZ6F69879N)"
-  },
-  "dmg" :{
-    "output_path":  "build/release/uprpc-arm64.dmg",
-    "volume_name":  "Uprpc"
-  },
-  "zip" :{
-    "output_path" : "build/release/uprpc-arm64.zip"
-}
+  }
 }

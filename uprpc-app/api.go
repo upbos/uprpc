@@ -32,6 +32,11 @@ func (api *Api) OpenProto() R {
 	return R{Success: true, Data: proto.ImportFile(api.ctx)}
 }
 
+func (api *Api) OpenIncludeDir() R {
+
+	return R{Success: true, Data: proto.OpenIncludeDir(api.ctx)}
+}
+
 func (api *Api) ParseProto(fileNames []string, includeDirs []string) R {
 	files, err := proto.Parse(fileNames, includeDirs)
 	if err != nil {

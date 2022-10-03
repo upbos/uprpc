@@ -42,6 +42,13 @@ type Metadata struct {
 	ParseType int8   `json:"parseType,omitempty"`
 }
 
+func OpenIncludeDir(ctx context.Context) string {
+	selection, _ := runtime.OpenDirectoryDialog(ctx, runtime.OpenDialogOptions{
+		Title: "Import IncludeDirs",
+	})
+	return selection
+}
+
 func ImportFile(ctx context.Context) []string {
 	selection, _ := runtime.OpenMultipleFilesDialog(ctx, runtime.OpenDialogOptions{
 		Title: "Import File",
@@ -52,7 +59,6 @@ func ImportFile(ctx context.Context) []string {
 			},
 		},
 	})
-
 	return selection
 }
 
@@ -83,7 +89,7 @@ func parseMethod(services []*desc.ServiceDescriptor) []*Method {
 	for _, service := range services {
 		for _, method := range service.GetMethods() {
 			fieldValue := parseMessageFields(method.GetInputType())
-			str, err := json.Marshal(&fieldValue)
+			str, err := json.MarshalIndent(&fieldValue, "", "\t")
 			if err != nil {
 				fmt.Println(err)
 			}

@@ -3,6 +3,8 @@
 import {main} from '../models';
 import {client} from '../models';
 
+export function OpenIncludeDir():Promise<main.R>;
+
 export function OpenProto():Promise<main.R>;
 
 export function ParseProto(arg1:Array<string>,arg2:Array<string>):Promise<main.R>;

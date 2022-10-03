@@ -335,7 +335,7 @@ func (c *Client) writeStream(cliStub *ClientStub, stream interface{}, respDesc *
 func (c *Client) emitReponse(id string, data *dynamic.Message, mds []Metadata, err error) {
 	var body string
 	if data != nil {
-		byte, _ := data.MarshalJSON()
+		byte, _ := data.MarshalJSONIndent()
 		body = string(byte)
 	}
 	if err != nil {

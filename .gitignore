@@ -7,3 +7,4 @@ uprpc-web/src/wailsjs/go/models.ts
 uprpc-app/.DS_Store
 .DS_Store
 .DS_Store
+.github/workflows/.secrets

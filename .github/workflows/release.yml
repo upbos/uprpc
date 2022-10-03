@@ -9,9 +9,23 @@ jobs:
     package:
         strategy:
             matrix:
-                platform: [macos-latest]
+                os: [macos-latest]
                 go-version: [1.18]
-        runs-on: ${{ matrix.platform }}
+                platform: [darwin/amd64, darwin/arm64, windows/amd64, windows/arm64]
+                include:
+                    - platform: darwin/amd64
+                      goarch: amd64
+                      goos: darwin
+                    - platform: darwin/arm64
+                      goarch: arm64
+                      goos: darwin
+                    - platform: windows/amd64
+                      goarch: amd64
+                      goos: windows
+                    - platform: windows/arm64
+                      goarch: arm64
+                      goos: windows
+        runs-on: ${{ matrix.os }}
         steps:
             - uses: actions/checkout@v2
             - name: Install Go
@@ -23,9 +37,10 @@ jobs:
             #   with:
             #       node-version: 16.13.1
             - name: MacOS download gon for code signing and app notarization
-              if: matrix.platform == 'macos-latest'
+              if: matrix.os == 'macos-latest'
               run: |
                   brew install mitchellh/gon/gon
+                  brew install rename
                   npm install -g appdmg
             # - name: Build uprpc-web
             #   run: |
@@ -42,10 +57,9 @@ jobs:
             - name: Build uprpc-app
               run: |
                   cd ./uprpc-app/scripts
-                  ./build-macos-arm.sh
-
+                  ./build.sh ${{ matrix.platform }}
             - name: Import Code-Signing Certificates for macOS
-              if: matrix.platform == 'macos-latest'
+              if: matrix.goos == 'darwin'
               uses: Apple-Actions/import-codesign-certs@v1
               with:
                   # The certificates in a PKCS12 file encoded as a base64 string
@@ -53,25 +67,34 @@ jobs:
                   # The password used to import the PKCS12 file.
                   p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
             - name: Sign our macOS binary
-              if: matrix.platform == 'macos-latest'
+              if: matrix.goos == 'darwin'
               run: |
                   echo "Signing Package"
                   cd ./uprpc-app
                   mkdir ./build/release
                   gon -log-level=info ./scripts/mac-sign.json    
-                  appdmg ./scripts/mac-dmg.json ./build/release/uprpc-arm64.dmg       
+                  appdmg ./scripts/mac-dmg.json ./build/release/uprpc-${{ matrix.goos }}-${{ matrix.goarch }}.dmg       
                   cd ./build/bin
-                  zip -r ../release/uprpc-arm64.zip ./
-
+                  zip -r ../release/uprpc-${{ matrix.goos }}-${{ matrix.goarch }}.zip ./
+            - name: Zip binary
+              if: matrix.goos != 'darwin'
+              run: |
+                  echo "Zip Package"
+                  cd ./uprpc-app
+                  mkdir ./build/release
+                  cd ./build/bin
+                  rename "s/uprpc/uprpc-${{ matrix.goos }}-${{ matrix.goarch }}/" *
+                  cp ./* ../release/
+                  zip -r ../release/uprpc-${{ matrix.goos }}-${{ matrix.goarch }}.zip ./
             - name: upload artifacts macOS
-              if: matrix.platform == 'macos-latest'
+              if: matrix.os == 'macos-latest'
               uses: actions/upload-artifact@v2
               with:
-                  name: ${{ matrix.platform }}
+                  name: ${{ matrix.os }}
                   path: uprpc-app/build/release/*
 
             - name: Sign Windows binaries
-              if: matrix.platform == 'windows-latest'
+              if: matrix.os == 'windows-latest'
               run: |
                   echo "Creating certificate file"
                   New-Item -ItemType directory -Path certificate
@@ -79,12 +102,11 @@ jobs:
                   certutil -decode certificate\certificate.txt certificate\certificate.pfx
                   echo "Signing our binaries"
                   & 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.17763.0/x86/signtool.exe' sign /fd sha256 /tr http://ts.ssl.com /f certificate\certificate.pfx /p '${{ secrets.WIN_SIGNING_CERT_PASSWORD }}' .\build\bin\Monitor.exe
-
             - name: upload artifacts windows
-              if: matrix.platform == 'windows-latest'
+              if: matrix.os == 'windows-latest'
               uses: actions/upload-artifact@v2
               with:
-                  name: ${{ matrix.platform }}
+                  name: ${{ matrix.os }}
                   path: uprpc-app/build/release/*
 
             - name: release

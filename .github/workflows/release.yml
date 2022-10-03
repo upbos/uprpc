@@ -9,7 +9,7 @@ jobs:
     package:
         strategy:
             matrix:
-                platform: [macos-latest]
+                platform: [windows-latest, macos-latest]
                 go-version: [1.18]
         runs-on: ${{ matrix.platform }}
         steps:
@@ -70,15 +70,15 @@ jobs:
                   name: ${{ matrix.platform }}
                   path: uprpc-app/build/release/*
 
-            - name: Sign Windows binaries
-              if: matrix.platform == 'windows-latest'
-              run: |
-                  echo "Creating certificate file"
-                  New-Item -ItemType directory -Path certificate
-                  Set-Content -Path certificate\certificate.txt -Value '${{ secrets.WIN_SIGNING_CERT }}'
-                  certutil -decode certificate\certificate.txt certificate\certificate.pfx
-                  echo "Signing our binaries"
-                  & 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.17763.0/x86/signtool.exe' sign /fd sha256 /tr http://ts.ssl.com /f certificate\certificate.pfx /p '${{ secrets.WIN_SIGNING_CERT_PASSWORD }}' .\build\bin\Monitor.exe
+            # - name: Sign Windows binaries
+            #   if: matrix.platform == 'windows-latest'
+            #   run: |
+            #       echo "Creating certificate file"
+            #       New-Item -ItemType directory -Path certificate
+            #       Set-Content -Path certificate\certificate.txt -Value '${{ secrets.WIN_SIGNING_CERT }}'
+            #       certutil -decode certificate\certificate.txt certificate\certificate.pfx
+            #       echo "Signing our binaries"
+            #       & 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.17763.0/x86/signtool.exe' sign /fd sha256 /tr http://ts.ssl.com /f certificate\certificate.pfx /p '${{ secrets.WIN_SIGNING_CERT_PASSWORD }}' .\build\bin\Monitor.exe
 
             - name: upload artifacts windows
               if: matrix.platform == 'windows-latest'

@@ -11,113 +11,21 @@ jobs:
             matrix:
                 os: [macos-latest]
                 go-version: [1.18]
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
                 platform: [darwin/amd64, darwin/arm64, windows/amd64, windows/arm64]
-=======
-                platform: [darwin/amd64, linux/amd64]
->>>>>>> fcc3856 (fix release)
-=======
-                platform: [darwin/amd64, darwin/arm64, windows/amd64, windows/arm64]
->>>>>>> 4479a1b (remove linux)
                 include:
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                platform: [darwin/amd64, darwin/arm64]
-=======
-                platform: [darwin/amd64, darwin/arm64, windows/amd64, windows/arm64, linux/amd64, linux/arm64]
->>>>>>> 0e2ac5f (fix release)
-                include:
->>>>>>> 308816c (fix relase)
                     - platform: darwin/amd64
                       goarch: amd64
                       goos: darwin
                     - platform: darwin/arm64
                       goarch: arm64
                       goos: darwin
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 0e2ac5f (fix release)
                     - platform: windows/amd64
                       goarch: amd64
                       goos: windows
                     - platform: windows/arm64
                       goarch: arm64
                       goos: windows
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                    - platform: linux/amd64
-                      goarch: amd64
-                      goos: linux
-                    - platform: linux/arm64
-                      goarch: arm64
-                      goos: linux
->>>>>>> 0e2ac5f (fix release)
-=======
->>>>>>> 4479a1b (remove linux)
         runs-on: ${{ matrix.os }}
-=======
-=======
-                    - goarch: amd64
-                      goos: linux
-                    - goarch: amd64
-=======
-                    - platform: macos-latest
-=======
-                platform: [darwin/arm64, darwin/amd64]
-                include:
-                    - platform: darwin/arm64
->>>>>>> 2c0b85b (modify release)
-                      goarch: arm64
-                      goos: darwin
-=======
-                platform: [darwin/amd64, linux/amd64, windows/amd64]
-                include:
->>>>>>> b2bf0fd (fix relase)
-                    - platform: darwin/amd64
-                      goarch: amd64
->>>>>>> 4b4ee7a (fix release)
-                      goos: darwin
-<<<<<<< HEAD
-<<<<<<< HEAD
-                    - goarch: arm64
-                      goos: darwin
->>>>>>> 1516eef (fix release)
-=======
->>>>>>> 1b00a90 (fix release)
-=======
-                    - platform: linux/amd64
-                      goarch: amd64
-                      goos: linux
-<<<<<<< HEAD
-                    - platform: windows/amd64
-                      goarch: amd64
-                      goos: windows
->>>>>>> b2bf0fd (fix relase)
-=======
->>>>>>> fcc3856 (fix release)
-
-<<<<<<< HEAD
-        runs-on: ${{ matrix.platform }}
->>>>>>> 70da473 (fix release)
-=======
-        runs-on: ${{ matrix.os }}
->>>>>>> 2c0b85b (modify release)
-=======
-        runs-on: ${{ matrix.platform }}
->>>>>>> 25a39fd (fix release)
-=======
-        runs-on: ${{ matrix.os }}
->>>>>>> 308816c (fix relase)
         steps:
             - uses: actions/checkout@v2
             - name: Install Go
@@ -149,45 +57,9 @@ jobs:
             - name: Build uprpc-app
               run: |
                   cd ./uprpc-app/scripts
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
                   ./build.sh ${{ matrix.platform }}
             - name: Import Code-Signing Certificates for macOS
-=======
-                  ./build.sh
-              env:
-                  GOOS: ${{ matrix.goos }}
-                  GOARCH: ${{ matrix.goarch }}
-
-            - name: Import Code-Signing Certificates for macOS
-<<<<<<< HEAD
-              # if: matrix.platform == 'macos-latest'
->>>>>>> c9a7817 (fix release)
-=======
-              # if: matrix.os == 'macos-latest'
->>>>>>> 2c0b85b (modify release)
               if: matrix.goos == 'darwin'
-=======
-                  ./build-macos-arm.sh
-            - name: Import Code-Signing Certificates for macOS
-              if: matrix.platform == 'macos-latest'
->>>>>>> 25a39fd (fix release)
-=======
-                  ./build-macos-arm.sh ${{ matrix.platform }}
-            - name: Import Code-Signing Certificates for macOS
-              if: matrix.os == 'macos-latest'
->>>>>>> 308816c (fix relase)
-=======
-                  ./build.sh ${{ matrix.platform }}
-            - name: Import Code-Signing Certificates for macOS
-<<<<<<< HEAD
-              if: matrix.platform == 'darwin/amd64' or matrix.platform == 'darwin/arm64'
->>>>>>> 0e2ac5f (fix release)
-=======
-              if: matrix.goos == 'darwin'
->>>>>>> da63f26 (fix release)
               uses: Apple-Actions/import-codesign-certs@v1
               with:
                   # The certificates in a PKCS12 file encoded as a base64 string
@@ -195,36 +67,7 @@ jobs:
                   # The password used to import the PKCS12 file.
                   p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
             - name: Sign our macOS binary
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-              # if: matrix.os == 'macos-latest'
->>>>>>> 2c0b85b (modify release)
               if: matrix.goos == 'darwin'
-=======
-              # if: matrix.platform == 'macos-latest'
-<<<<<<< HEAD
-              if: ${{ matrix.goos }} == 'darwin'
->>>>>>> 272176a (fix release)
-=======
-              if: matrix.goos == 'darwin'
->>>>>>> c9a7817 (fix release)
-=======
-              if: matrix.platform == 'macos-latest'
->>>>>>> 25a39fd (fix release)
-=======
-              if: matrix.os == 'macos-latest'
->>>>>>> 308816c (fix relase)
-=======
-              if: matrix.platform == 'darwin/amd64' or matrix.platform == 'darwin/arm64'
->>>>>>> 0e2ac5f (fix release)
-=======
-              if: matrix.goos == 'darwin'
->>>>>>> da63f26 (fix release)
               run: |
                   echo "Signing Package"
                   cd ./uprpc-app
@@ -232,53 +75,9 @@ jobs:
                   gon -log-level=info ./scripts/mac-sign.json    
                   appdmg ./scripts/mac-dmg.json ./build/release/uprpc-${{ matrix.goos }}-${{ matrix.goarch }}.dmg       
                   cd ./build/bin
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
                   zip -r ../release/uprpc-${{ matrix.goos }}-${{ matrix.goarch }}.zip ./
             - name: Zip binary
-<<<<<<< HEAD
-<<<<<<< HEAD
               if: matrix.goos != 'darwin'
-=======
-                  zip -r ../release/uprpc-arm64.zip ./
-=======
-                  zip -r ../release/uprpc-${{ matrix.goos }}-${{ matrix.goarch }}.zip ./
->>>>>>> a68eb98 (fix release)
-            - name: Zip package file
-<<<<<<< HEAD
-              # if: matrix.platform == 'macos-latest'
-<<<<<<< HEAD
-              if: ${{ matrix.goos }} != 'darwin'
->>>>>>> 272176a (fix release)
-=======
-=======
-              # if: matrix.os == 'macos-latest'
->>>>>>> 2c0b85b (modify release)
-              if: matrix.goos != 'darwin'
->>>>>>> c9a7817 (fix release)
-              run: |
-<<<<<<< HEAD
-                  echo "Zip Package"
-                  cd ./uprpc-app
-                  mkdir ./build/release
-                  cd ./build/bin
-                  rename "s/uprpc/uprpc-${{ matrix.goos }}-${{ matrix.goarch }}/" *
-                  cp ./* ../release/
-                  zip -r ../release/uprpc-${{ matrix.goos }}-${{ matrix.goarch }}.zip ./
-
-=======
-                  zip -r ../release/uprpc-arm64.zip ./
->>>>>>> 25a39fd (fix release)
-=======
-                  zip -r ../release/uprpc-${{ matrix.goos }}-${{ matrix.goarch }}.zip ./
->>>>>>> 308816c (fix relase)
-=======
-              if: matrix.platform != 'darwin/amd64' and matrix.platform != 'darwin/arm64'
-=======
-              if: matrix.goos != 'darwin'
->>>>>>> da63f26 (fix release)
               run: |
                   echo "Zip Package"
                   cd ./uprpc-app
@@ -287,11 +86,6 @@ jobs:
                   rename "s/uprpc/uprpc-${{ matrix.goos }}-${{ matrix.goarch }}/" *
                   cp ./* ../release/
                   zip -r ../release/uprpc-${{ matrix.goos }}-${{ matrix.goarch }}.zip ./
-<<<<<<< HEAD
->>>>>>> 0e2ac5f (fix release)
-=======
-
->>>>>>> 2aa66a4 (fix release)
             - name: upload artifacts macOS
               if: matrix.os == 'macos-latest'
               uses: actions/upload-artifact@v2
@@ -299,18 +93,6 @@ jobs:
                   name: ${{ matrix.os }}
                   path: uprpc-app/build/release/*
 
-<<<<<<< HEAD
-            # - name: Sign Windows binaries
-            #   if: matrix.os == 'windows-latest'
-            #   run: |
-            #       echo "Creating certificate file"
-            #       New-Item -ItemType directory -Path certificate
-            #       Set-Content -Path certificate\certificate.txt -Value '${{ secrets.WIN_SIGNING_CERT }}'
-            #       certutil -decode certificate\certificate.txt certificate\certificate.pfx
-            #       echo "Signing our binaries"
-            #       & 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.17763.0/x86/signtool.exe' sign /fd sha256 /tr http://ts.ssl.com /f certificate\certificate.pfx /p '${{ secrets.WIN_SIGNING_CERT_PASSWORD }}' .\build\bin\Monitor.exe
->>>>>>> 5786acd (add matrix)
-=======
             - name: Sign Windows binaries
               if: matrix.os == 'windows-latest'
               run: |
@@ -326,7 +108,6 @@ jobs:
               with:
                   name: ${{ matrix.os }}
                   path: uprpc-app/build/release/*
->>>>>>> 25a39fd (fix release)
 
             - name: release
               uses: softprops/action-gh-release@v0.1.14

@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
+	"path/filepath"
 
 	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
 	uuid "github.com/satori/go.uuid"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	osruntime "runtime"
 )
 
 var b2i = map[bool]int8{false: 0, true: 1}
@@ -75,7 +77,12 @@ func Parse(fileNames []string, includeDirs []string) ([]*File, error) {
 
 	var files []*File
 	for i, fileDesc := range fileDescs {
-		file := File{Id: uuid.NewV4().String(), Host: "127.0.0.1:9000", Name: path.Base(fileNames[i]), Path: fileNames[i]}
+		fileName := fileNames[i]
+		if osruntime.GOOS == "windows" {
+			fileName = filepath.ToSlash(fileName)
+		}
+
+		file := File{Id: uuid.NewV4().String(), Host: "127.0.0.1:9000", Name: path.Base(fileName), Path: fileNames[i]}
 		services := fileDesc.GetServices()
 		file.Methods = parseMethod(services)
 

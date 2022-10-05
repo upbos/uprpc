@@ -1,8 +1,8 @@
 import {makeAutoObservable} from "mobx";
 import {Method, Mode, Proto, RequestCache, RequestData, ResponseCache, ResponseData} from "@/types/types";
 import * as storage from "./localStorage";
-import {OpenProto, ParseProto, Send, Stop} from "@/wailsjs/go/main/Api";
-import {client} from "@/wailsjs/go/models";
+import {OpenProto, ParseProto, Push, Send, Stop} from "@/wailsjs/go/main/Api";
+import {cli} from "@/wailsjs/go/models";
 import {EventsOn} from "@/wailsjs/runtime";
 import {req} from "pino-std-serializers";
 
@@ -101,11 +101,11 @@ export default class ProtoStore {
         if (requestData.methodMode != Mode.Unary) {
             this.runningCaches.set(requestData.id, true);
         }
-        yield this.push(requestData);
+        yield this.push(requestData, false);
     }
 
-    * push(requestData: RequestData): any {
-        console.log("send request data", requestData);
+    * push(requestData: RequestData, isPush: boolean): any {
+
         let requestCache = this.requestCaches.get(requestData.id);
         if (requestCache == null) {
             this.requestCaches.set(requestData.id, {streams: [requestData.body]});
@@ -115,7 +115,13 @@ export default class ProtoStore {
             this.requestCaches.set(requestData.id, {streams: streams});
         }
         requestData.includeDirs = storage.listIncludeDir();
-        yield Send(new client.RequestData(requestData));
+        if (isPush) {
+            yield Push(new cli.RequestData(requestData));
+        } else {
+            console.log("send request data", requestData);
+            yield Send(new cli.RequestData(requestData));
+        }
+
     }
 
     * removeCache(methodId: string): any {

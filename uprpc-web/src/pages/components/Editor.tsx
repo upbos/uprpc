@@ -63,7 +63,7 @@ const editor = ({proto, method: initMethod}: EditorProp) => {
         };
     }
     const onPush = async () => {
-        await protoStore.push(getRequestData());
+        await protoStore.push(getRequestData(), true);
     }
 
     const onSend = async () => {

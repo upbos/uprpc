@@ -1,7 +1,9 @@
 package client
 
 import (
+	"context"
 	"sync"
+	"time"
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
@@ -31,8 +33,16 @@ func CreateStub(req *RequestData, write chan interface{}, stop chan string) (*Cl
 
 	// create connect
 	// TODO: consider reuse
-	conn, err := grpc.Dial(req.Host, grpc.WithInsecure(), grpc.WithBlock())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	defer cancel()
+	conn, err := grpc.DialContext(ctx, req.Host, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
+		if write != nil {
+			close(write)
+		}
+		if stop != nil {
+			close(stop)
+		}
 		return nil, errors.Wrap(err, "connect server error")
 	}
 

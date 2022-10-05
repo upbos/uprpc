@@ -87,13 +87,17 @@ func (c *Client) Stop(id string) {
 	}
 }
 
-func (c *Client) openStub(req *RequestData, write chan interface{}, stop chan string) *ClientStub {
+func (c *Client) openStub(req *RequestData, write chan interface{}, stop chan string) (*ClientStub, error) {
 	stub := c.stubs[req.Id]
+	var err error
 	if stub == nil {
-		stub, _ = CreateStub(req, write, stop)
+		stub, err = CreateStub(req, write, stop)
+		if err != nil {
+			return nil, err
+		}
 		c.stubs[req.Id] = stub
 	}
-	return stub
+	return stub, nil
 }
 
 func (c *Client) closeStub(cliStub *ClientStub) {
@@ -105,7 +109,12 @@ func (c *Client) closeStub(cliStub *ClientStub) {
 }
 
 func (c *Client) invokeUnary(req *RequestData) *ResponseData {
-	cliStub := c.openStub(req, nil, nil)
+	cliStub, err := c.openStub(req, nil, nil)
+	if err != nil {
+		c.emitReponse(req.Id, nil, nil, err)
+		return nil
+	}
+
 	methodDesc := cliStub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
 	respDesc := methodDesc.GetOutputType()
@@ -122,6 +131,7 @@ func (c *Client) invokeUnary(req *RequestData) *ResponseData {
 	resp, err := cliStub.stub.InvokeRpc(ctx, methodDesc, reqMsg, grpc.Trailer(&trailer))
 	if err != nil {
 		c.emitReponse(req.Id, nil, ParseMetadata(trailer), err)
+		c.closeStub(cliStub)
 		return nil
 	}
 
@@ -133,7 +143,11 @@ func (c *Client) invokeUnary(req *RequestData) *ResponseData {
 }
 
 func (c *Client) invokeServerStream(req *RequestData) *ResponseData {
-	cliStub := c.openStub(req, nil, make(chan string, 1))
+	cliStub, err := c.openStub(req, nil, make(chan string, 1))
+	if err != nil {
+		c.emitReponse(req.Id, nil, nil, err)
+		return nil
+	}
 	methodDesc := cliStub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
 	respDesc := methodDesc.GetOutputType()
@@ -158,7 +172,11 @@ func (c *Client) invokeServerStream(req *RequestData) *ResponseData {
 }
 
 func (c *Client) invokeClientStream(req *RequestData) *ResponseData {
-	cliStub := c.openStub(req, make(chan interface{}, 1), make(chan string, 1))
+	cliStub, err := c.openStub(req, make(chan interface{}, 1), make(chan string, 1))
+	if err != nil {
+		c.emitReponse(req.Id, nil, nil, err)
+		return nil
+	}
 	methodDesc := cliStub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
 	respDesc := methodDesc.GetOutputType()
@@ -193,7 +211,11 @@ func (c *Client) invokeClientStream(req *RequestData) *ResponseData {
 }
 
 func (c *Client) invokeBidirectionalStream(req *RequestData) *ResponseData {
-	cliStub := c.openStub(req, make(chan interface{}, 1), make(chan string, 1))
+	cliStub, err := c.openStub(req, make(chan interface{}, 1), make(chan string, 1))
+	if err != nil {
+		c.emitReponse(req.Id, nil, nil, err)
+		return nil
+	}
 	methodDesc := cliStub.proto.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
 	reqDesc := methodDesc.GetInputType()
 	respDesc := methodDesc.GetOutputType()

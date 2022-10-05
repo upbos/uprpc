@@ -31,9 +31,9 @@ func CreateStub(req *RequestData, write chan interface{}, stop chan string) (*Cl
 
 	// create connect
 	// TODO: consider reuse
-	conn, err := grpc.Dial(req.Host, grpc.WithInsecure())
+	conn, err := grpc.Dial(req.Host, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
-		return nil, errors.Wrap(err, "parse proto error")
+		return nil, errors.Wrap(err, "connect server error")
 	}
 
 	// create stub

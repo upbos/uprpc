@@ -5,8 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"path"
 	"path/filepath"
+	"syscall"
+	"uprpc/pkg/file"
 
 	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/jhump/protoreflect/desc"
@@ -61,34 +65,59 @@ func ImportFile(ctx context.Context) []string {
 			},
 		},
 	})
+	fmt.Printf("3333 %v", selection)
 	return selection
 }
 
-func Parse(fileNames []string, includeDirs []string) ([]*File, error) {
+func Parse(fileNames, includeDirs []string) ([]*File, error) {
+	var files []*File
+	for _, fileName := range fileNames {
+		file, err := parseFile(fileName, includeDirs)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, file)
+	}
+	return files, nil
+}
+
+func parseFile(protoPath string, includeDirs []string) (*File, error) {
+	fmt.Printf("parse proto file name: %+v, include dirs: %+v\n", protoPath, includeDirs)
+
 	// 创建parser对象
 	parser := protoparse.Parser{}
-	parser.ImportPaths = includeDirs
+	parser.Accessor = func(filename string) (io.ReadCloser, error) {
+		fmt.Printf("Accessor filename: %v \n", filename)
+		lookupFile := lookupFile(filename, append(includeDirs, path.Dir(protoPath)))
+		return os.OpenFile(lookupFile, syscall.O_RDONLY, 0)
+	}
+
 	// 使用path的方式解析得到一些列文件描述对象，这里只有一个文件描述对象
-	fileDescs, err := parser.ParseFiles(fileNames...)
+	fileDescs, err := parser.ParseFiles(protoPath)
 	if err != nil {
-		fmt.Printf("parse proto file failed, err = %s", err.Error())
+		fmt.Printf("parse proto file failed, error:  %s\n", err.Error())
 		return nil, err
 	}
 
-	var files []*File
-	for i, fileDesc := range fileDescs {
-		fileName := fileNames[i]
-		if osruntime.GOOS == "windows" {
-			fileName = filepath.ToSlash(fileName)
-		}
-
-		file := File{Id: uuid.NewV4().String(), Host: "127.0.0.1:9000", Name: path.Base(fileName), Path: fileNames[i]}
-		services := fileDesc.GetServices()
-		file.Methods = parseMethod(services)
-
-		files = append(files, &file)
+	if osruntime.GOOS == "windows" {
+		protoPath = filepath.ToSlash(protoPath)
 	}
-	return files, nil
+
+	file := File{Id: uuid.NewV4().String(), Host: "127.0.0.1:9000", Name: path.Base(protoPath), Path: protoPath}
+	services := fileDescs[0].GetServices()
+	file.Methods = parseMethod(services)
+
+	return &file, nil
+}
+
+func lookupFile(fileName string, includeDirs []string) string {
+	for _, dir := range includeDirs {
+		joinFile := path.Join(dir, fileName)
+		if ok, _ := file.ExistPath(joinFile); ok {
+			return joinFile
+		}
+	}
+	return fileName
 }
 
 func parseMethod(services []*desc.ServiceDescriptor) []*Method {

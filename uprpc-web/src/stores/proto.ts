@@ -57,8 +57,7 @@ export default class ProtoStore {
 
     * importProto(): any {
         let res = yield OpenProto();
-        debugger;
-        if (!res.success) return res;
+        if (!res.success || res.data == null || res.data.length == 0) return {success: true};
 
         res = yield ParseProto(res.data, storage.listIncludeDir());
         storage.addProtos(res.data);

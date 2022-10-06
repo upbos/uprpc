@@ -13,6 +13,11 @@ func TestParse(t *testing.T) {
 	if str, err := json.Marshal(&files); err == nil {
 		fmt.Println(string(str))
 	}
-	//fmt.Println("--------", err.Error())
+}
 
+func TestLookupFile(t *testing.T) {
+	filename := "/Users/jason/dev/grpc/proto/fee_model.proto"
+	includeDirs := []string{"/Users/jason/dev/grpc/proto/"}
+	path := lookupFile(filename, includeDirs)
+	fmt.Println(path)
 }

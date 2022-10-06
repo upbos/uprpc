@@ -22,7 +22,7 @@ export default class IncludeDirStore {
 
     * addIncludeDir(): any {
         let res = yield OpenIncludeDir()
-        if (res.success) {
+        if (res.success && res.data != '') {
             storage.addIncludeDir(res.data);
             this.includeDirs = storage.listIncludeDir();
         }
@@ -30,5 +30,6 @@ export default class IncludeDirStore {
 
     * removeIncludeDir(path: string) {
         storage.removeIncludeDir(path);
+        this.includeDirs = storage.listIncludeDir();
     }
 }

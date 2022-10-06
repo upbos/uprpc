@@ -3,6 +3,8 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
@@ -10,7 +12,7 @@ import (
 	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"io"
+	"google.golang.org/protobuf/runtime/protoiface"
 )
 
 type Metadata struct {
@@ -109,8 +111,7 @@ func (c *Client) Stop(id string) {
 		_ = stream.bidiStream.CloseSend()
 	}
 
-	emitClose(c.ctx, id)
-	stream.cli.close()
+	close(c.ctx, id)
 }
 
 func close(ctx context.Context, id string) {
@@ -235,24 +236,7 @@ func (c *Client) invokeServerStream(req *RequestData) {
 		srvStream:  srvStream,
 	}
 
-	go func(srvStream *grpcdynamic.ServerStream) {
-		respMsg := dynamic.NewMessage(methodDesc.GetOutputType())
-		for {
-			respMsg.Reset()
-			msg, err := srvStream.RecvMsg()
-			fmt.Printf("srever stream: %v", msg)
-			if err == nil {
-				emitMsg(c.ctx, req.Id, parseResponse(methodDesc, &msg), nil)
-				continue
-			}
-
-			if err == io.EOF {
-				emitMsg(c.ctx, req.Id, parseResponse(methodDesc, &msg), parsePairs(srvStream.Trailer()))
-			}
-			close(c.ctx, req.Id)
-			break
-		}
-	}(srvStream)
+	go c.readStream(streams[req.Id], srvStream, req.Id)
 }
 
 func (c *Client) invokeBidiStream(req *RequestData) {
@@ -282,26 +266,35 @@ func (c *Client) invokeBidiStream(req *RequestData) {
 		cli:        cliStub,
 		bidiStream: bidiStream,
 	}
-	go func(bidiStream *grpcdynamic.BidiStream) {
-		respMsg := dynamic.NewMessage(methodDesc.GetOutputType())
-		for {
-			respMsg.Reset()
-			// block until response is received
-			msg, err := bidiStream.RecvMsg()
+	go c.readStream(streams[req.Id], bidiStream, req.Id)
+	c.Push(req)
+}
 
-			fmt.Printf("srever stream: %v, error: %v\n", msg, err)
-			if err == nil {
-				emitMsg(c.ctx, req.Id, parseResponse(methodDesc, &msg), nil)
-				continue
-			}
+type recvStream interface {
+	RecvMsg() (protoiface.MessageV1, error)
+	Trailer() metadata.MD
+}
 
-			if err == io.EOF {
-				emitMsg(c.ctx, req.Id, parseResponse(methodDesc, &msg), parsePairs(bidiStream.Trailer()))
-			}
-			emitErr(c.ctx, req.Id, nil, err)
-			close(c.ctx, req.Id)
+func (c *Client) readStream(stream *stream, readStream recvStream, id string) {
+	respMsg := dynamic.NewMessage(stream.methodDesc.GetOutputType())
+	for {
+		respMsg.Reset()
+		// block until response is received
+		msg, err := readStream.RecvMsg()
+
+		fmt.Printf("srever stream: %v, error: %v\n", msg, err)
+		if err == nil {
+			emitMsg(c.ctx, id, parseResponse(stream.methodDesc, &msg), nil)
+			continue
+		}
+
+		if err == io.EOF {
+			emitMsg(c.ctx, id, parseResponse(stream.methodDesc, &msg), parsePairs(readStream.Trailer()))
+			close(c.ctx, id)
 			break
 		}
-	}(bidiStream)
-	c.Push(req)
+		emitErr(c.ctx, id, nil, err)
+		close(c.ctx, id)
+		break
+	}
 }

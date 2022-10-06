@@ -60,9 +60,10 @@ class HelloWorldService {
         console.log("sayHelloServer 收到客户端请求：", call.request.name);
         let count = 0;
         let s = setInterval(() => {
-            call.write({
+            let ss = call.write({
                 message: call.request.name + "sayHelloServer: now time is:" + new Date(),
             });
+            console.log("sayHelloServer: send to client:", ss);
             count++;
             if (count > 10) {
                 let metadata = new grpc_js_1.Metadata();

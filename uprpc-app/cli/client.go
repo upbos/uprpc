@@ -113,6 +113,14 @@ func (c *Client) Stop(id string) {
 	stream.cli.close()
 }
 
+func close(ctx context.Context, id string) {
+	emitClose(ctx, id)
+	if stream, ok := streams[id]; ok {
+		stream.cli.close()
+		delete(streams, id)
+	}
+}
+
 func findMethodDesc(path string, serviceFullyName string, methodName string) (*desc.MethodDescriptor, error) {
 	//  parse proto
 	p := protoparse.Parser{}
@@ -152,6 +160,7 @@ func (c *Client) invokeUnary(req *RequestData) {
 	methodDesc, err := findMethodDesc(req.ProtoPath, req.ServiceFullyName, req.MethodName)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
+		cliStub.close()
 		return
 	}
 
@@ -159,6 +168,7 @@ func (c *Client) invokeUnary(req *RequestData) {
 	resp, err := cliStub.stub.InvokeRpc(buildContext(&req.Mds), methodDesc, buildRequest(methodDesc, req.Body), grpc.Trailer(&trailer))
 	if err != nil {
 		emitErr(c.ctx, req.Id, parsePairs(trailer), err)
+		cliStub.close()
 		return
 	}
 
@@ -170,19 +180,21 @@ func (c *Client) invokeClientStream(req *RequestData) {
 	cliStub, err := createStub(req.Host)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
+		close(c.ctx, req.Id)
 		return
 	}
 
 	methodDesc, err := findMethodDesc(req.ProtoPath, req.ServiceFullyName, req.MethodName)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
-		emitClose(c.ctx, req.Id)
+		close(c.ctx, req.Id)
 		return
 	}
 
 	clientStream, err := cliStub.stub.InvokeRpcClientStream(buildContext(&req.Mds), methodDesc)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
+		close(c.ctx, req.Id)
 		return
 	}
 
@@ -198,19 +210,21 @@ func (c *Client) invokeServerStream(req *RequestData) {
 	cliStub, err := createStub(req.Host)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
-		emitClose(c.ctx, req.Id)
+		close(c.ctx, req.Id)
 		return
 	}
 
 	methodDesc, err := findMethodDesc(req.ProtoPath, req.ServiceFullyName, req.MethodName)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
+		close(c.ctx, req.Id)
 		return
 	}
 
 	srvStream, err := cliStub.stub.InvokeRpcServerStream(buildContext(&req.Mds), methodDesc, buildRequest(methodDesc, req.Body))
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
+		close(c.ctx, req.Id)
 		return
 	}
 
@@ -235,8 +249,7 @@ func (c *Client) invokeServerStream(req *RequestData) {
 			if err == io.EOF {
 				emitMsg(c.ctx, req.Id, parseResponse(methodDesc, &msg), parsePairs(srvStream.Trailer()))
 			}
-			emitClose(c.ctx, req.Id)
-			cliStub.close()
+			close(c.ctx, req.Id)
 			break
 		}
 	}(srvStream)
@@ -253,15 +266,16 @@ func (c *Client) invokeBidiStream(req *RequestData) {
 	methodDesc, err := findMethodDesc(req.ProtoPath, req.ServiceFullyName, req.MethodName)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
+		close(c.ctx, req.Id)
 		return
 	}
 
 	bidiStream, err := cliStub.stub.InvokeRpcBidiStream(buildContext(&req.Mds), methodDesc)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
+		close(c.ctx, req.Id)
 		return
 	}
-
 	streams[req.Id] = &stream{
 		methodMode: req.MethodMode,
 		methodDesc: methodDesc,
@@ -285,8 +299,7 @@ func (c *Client) invokeBidiStream(req *RequestData) {
 				emitMsg(c.ctx, req.Id, parseResponse(methodDesc, &msg), parsePairs(bidiStream.Trailer()))
 			}
 			emitErr(c.ctx, req.Id, nil, err)
-			emitClose(c.ctx, req.Id)
-			cliStub.close()
+			close(c.ctx, req.Id)
 			break
 		}
 	}(bidiStream)

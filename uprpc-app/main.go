@@ -4,11 +4,10 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"net/http"
-	_ "net/http/pprof"
-
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
+	"net/http"
+	_ "net/http/pprof"
 )
 
 //go:embed frontend/dist

@@ -3,10 +3,13 @@ package cli
 import (
 	"context"
 	"fmt"
+	"github.com/golang/protobuf/proto"
+	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/dynamic"
 	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
-
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"io"
-	"runtime"
 )
 
 type Metadata struct {
@@ -48,27 +51,20 @@ type Client struct {
 	ctx context.Context
 }
 
+type stream struct {
+	methodMode Mode
+	methodDesc *desc.MethodDescriptor
+	cli        *client
+	cliStream  *grpcdynamic.ClientStream
+	srvStream  *grpcdynamic.ServerStream
+	bidiStream *grpcdynamic.BidiStream
+}
+
+var streams = make(map[string]*stream)
+
 func New(ctx context.Context) *Client {
 	return &Client{
 		ctx: ctx,
-	}
-}
-
-func (c *Client) Stop(id string) {
-	stub, ok := stubs[id]
-	if !ok {
-		return
-	}
-	fmt.Printf("stop stream: %+v", stub)
-
-	switch stub.methodMode {
-	case ClientStream:
-		stub.cliStop <- true
-	case ServerStream:
-		stub.srvStop <- true
-	case BidirectionalStream:
-		stub.cliStop <- true
-		stub.srvStop <- true
 	}
 }
 
@@ -81,158 +77,207 @@ func (c *Client) Send(req *RequestData) {
 	case ServerStream:
 		c.invokeServerStream(req)
 	case BidirectionalStream:
-		c.invokeBidirectionalStream(req)
+		c.invokeBidiStream(req)
 	}
 }
 
 func (c *Client) Push(req *RequestData) {
-	stub, ok := stubs[req.Id]
+	if stream, ok := streams[req.Id]; ok {
+		methodDesc, _ := findMethodDesc(req.ProtoPath, req.ServiceFullyName, req.MethodName)
+		if req.MethodMode == ClientStream {
+			stream.cliStream.SendMsg(buildRequest(methodDesc, req.Body))
+		}
+		if req.MethodMode == BidirectionalStream {
+			stream.bidiStream.SendMsg(buildRequest(methodDesc, req.Body))
+		}
+	}
+}
+
+func (c *Client) Stop(id string) {
+	stream, ok := streams[id]
 	if !ok {
 		return
 	}
-	methodDesc := stub.file.FindService(req.ServiceFullyName).FindMethodByName(req.MethodName)
-	stub.cliMsg <- buildRequest(methodDesc, req.Body)
+	if stream.methodMode == ClientStream {
+		if msg, err := stream.cliStream.CloseAndReceive(); err == nil {
+			emitMsg(c.ctx, id, parseResponse(stream.methodDesc, &msg), parsePairs(stream.cliStream.Trailer()))
+		}
+	}
+
+	if stream.methodMode == BidirectionalStream {
+		_ = stream.bidiStream.CloseSend()
+	}
+
+	emitClose(c.ctx, id)
+	stream.cli.close()
+}
+
+func buildContext(mds *[]Metadata) context.Context {
+	md := buildPairs(*mds)
+	return metadata.NewOutgoingContext(context.Background(), md)
+}
+
+func buildRequest(methodDesc *desc.MethodDescriptor, body string) *dynamic.Message {
+	reqMsg := dynamic.NewMessage(methodDesc.GetInputType())
+	reqMsg.UnmarshalMergeJSON([]byte(body))
+	return reqMsg
+}
+
+func parseResponse(methodDesc *desc.MethodDescriptor, response *proto.Message) string {
+	respMsg := dynamic.NewMessage(methodDesc.GetOutputType())
+	respMsg.ConvertFrom(*response)
+	byte, _ := respMsg.MarshalJSONIndent()
+	return string(byte)
 }
 
 func (c *Client) invokeUnary(req *RequestData) {
-	cliStub, err := createStub(req)
+	cliStub, err := createStub(req.Host)
 	if err != nil {
-		emitResponse(c.ctx, req.Id, "", nil, err)
+		emitErr(c.ctx, req.Id, nil, err)
 		return
 	}
 
-	resp, mds, err := cliStub.InvokeUnary(req)
+	methodDesc, err := findMethodDesc(req.ProtoPath, req.ServiceFullyName, req.MethodName)
 	if err != nil {
-		emitResponse(c.ctx, req.Id, "", mds, err)
+		emitErr(c.ctx, req.Id, nil, err)
 		return
 	}
-	emitResponse(c.ctx, req.Id, resp, mds, nil)
+
+	var trailer metadata.MD
+	resp, err := cliStub.stub.InvokeRpc(buildContext(&req.Mds), methodDesc, buildRequest(methodDesc, req.Body), grpc.Trailer(&trailer))
+	if err != nil {
+		emitErr(c.ctx, req.Id, parsePairs(trailer), err)
+		return
+	}
+
+	emitMsg(c.ctx, req.Id, parseResponse(methodDesc, &resp), nil)
 	cliStub.close()
 }
 
 func (c *Client) invokeClientStream(req *RequestData) {
-	cliStub, err := createStub(req)
+	cliStub, err := createStub(req.Host)
 	if err != nil {
-		emitResponse(c.ctx, req.Id, "", nil, err)
-		return
-	}
-	clientStream, err := cliStub.invokeClientStream(req)
-	if err != nil {
-		emitResponse(c.ctx, req.Id, "", nil, err)
-		emitClose(c.ctx, req)
-		cliStub.close()
+		emitErr(c.ctx, req.Id, nil, err)
 		return
 	}
 
-	go func(clientStream *grpcdynamic.ClientStream) {
-		respMsg := cliStub.getResponseMessage(req.ServiceFullyName, req.MethodName)
-		for {
-			respMsg.Reset()
-			select {
-			case <-stubs[req.Id].cliStop:
-				if msg, err := clientStream.CloseAndReceive(); err == nil {
-					emitResponse(c.ctx, req.Id, cliStub.parseResponse(respMsg, &msg), ParseMd(clientStream.Trailer()), nil)
-					emitClose(c.ctx, req)
-					runtime.Goexit()
-				}
-				fmt.Printf("close client write stream failed: %v", err)
-			case data := <-stubs[req.Id].cliMsg:
-				fmt.Printf("client push data: %+v", data)
-				clientStream.SendMsg(data)
-			}
-		}
-	}(clientStream)
+	methodDesc, err := findMethodDesc(req.ProtoPath, req.ServiceFullyName, req.MethodName)
+	if err != nil {
+		emitErr(c.ctx, req.Id, nil, err)
+		return
+	}
 
+	clientStream, err := cliStub.stub.InvokeRpcClientStream(buildContext(&req.Mds), methodDesc)
+	if err != nil {
+		emitErr(c.ctx, req.Id, nil, err)
+		return
+	}
+
+	streams[req.Id] = &stream{
+		methodMode: req.MethodMode,
+		methodDesc: methodDesc,
+		cli:        cliStub,
+		cliStream:  clientStream,
+	}
 }
 
 func (c *Client) invokeServerStream(req *RequestData) {
-	cliStub, err := createStub(req)
+	cliStub, err := createStub(req.Host)
 	if err != nil {
-		emitResponse(c.ctx, req.Id, "", nil, err)
-		return
-	}
-	// call method
-	serverStream, err := cliStub.InvokeServerStream(req)
-	if err != nil {
-		emitResponse(c.ctx, req.Id, "", nil, err)
-		emitClose(c.ctx, req)
-		cliStub.close()
+		emitErr(c.ctx, req.Id, nil, err)
 		return
 	}
 
-	go func(serverStream *grpcdynamic.ServerStream) {
-		respMsg := cliStub.getResponseMessage(req.ServiceFullyName, req.MethodName)
+	methodDesc, err := findMethodDesc(req.ProtoPath, req.ServiceFullyName, req.MethodName)
+	if err != nil {
+		emitErr(c.ctx, req.Id, nil, err)
+		return
+	}
+
+	srvStream, err := cliStub.stub.InvokeRpcServerStream(buildContext(&req.Mds), methodDesc, buildRequest(methodDesc, req.Body))
+	if err != nil {
+		emitErr(c.ctx, req.Id, nil, err)
+		return
+	}
+
+	streams[req.Id] = &stream{
+		methodMode: req.MethodMode,
+		methodDesc: methodDesc,
+		cli:        cliStub,
+		srvStream:  srvStream,
+	}
+
+	go func(srvStream *grpcdynamic.ServerStream) {
+		respMsg := dynamic.NewMessage(methodDesc.GetOutputType())
 		for {
 			respMsg.Reset()
-			select {
-			case <-stubs[req.Id].srvStop:
-				runtime.Goexit()
-			default:
-				msg, err := serverStream.RecvMsg()
-				fmt.Printf("srever stream: %v", msg)
-				if err == io.EOF {
-					emitResponse(c.ctx, req.Id, "", ParseMd(serverStream.Trailer()), nil)
-					emitClose(c.ctx, req)
-					cliStub.close()
-					return
-				}
-				emitResponse(c.ctx, req.Id, cliStub.parseResponse(respMsg, &msg), nil, nil)
+			msg, err := srvStream.RecvMsg()
+			fmt.Printf("srever stream: %v", msg)
+			if err == nil {
+				emitMsg(c.ctx, req.Id, parseResponse(methodDesc, &msg), nil)
+				continue
 			}
+
+			if err == io.EOF {
+				emitMsg(c.ctx, req.Id, parseResponse(methodDesc, &msg), parsePairs(srvStream.Trailer()))
+			}
+			emitClose(c.ctx, req.Id)
+			cliStub.close()
+			break
 		}
-	}(serverStream)
+	}(srvStream)
 }
 
-func (c *Client) invokeBidirectionalStream(req *RequestData) {
-	cliStub, err := createStub(req)
-	if err != nil {
-		emitResponse(c.ctx, req.Id, "", nil, err)
-		return
+func (c *Client) stopServerStream(id string) {
+	if stream, ok := streams[id]; ok {
+		emitClose(c.ctx, id)
+		stream.cli.close()
 	}
-	// create new call for method
-	bidiStream, err := cliStub.InvokeBidirectionalStream(req)
+}
+
+func (c *Client) invokeBidiStream(req *RequestData) {
+	cliStub, err := createStub(req.Host)
 	if err != nil {
-		emitResponse(c.ctx, req.Id, "", nil, err)
-		emitClose(c.ctx, req)
-		cliStub.close()
+		emitErr(c.ctx, req.Id, nil, err)
 		return
 	}
 
-	go func(bidiStream *grpcdynamic.BidiStream) {
-		respMsg := cliStub.getResponseMessage(req.ServiceFullyName, req.MethodName)
-		for {
-			respMsg.Reset()
-			select {
-			case <-stubs[req.Id].cliStop:
-				if err := bidiStream.CloseSend(); err == nil {
-					emitClose(c.ctx, req)
-					runtime.Goexit()
-				}
-				fmt.Printf("close client write stream failed: %v", err)
-			case data := <-stubs[req.Id].cliMsg:
-				fmt.Printf("client push data: %+v", data)
-				bidiStream.SendMsg(data)
-			}
-		}
-	}(bidiStream)
+	methodDesc, err := findMethodDesc(req.ProtoPath, req.ServiceFullyName, req.MethodName)
+	if err != nil {
+		emitErr(c.ctx, req.Id, nil, err)
+		return
+	}
 
+	bidiStream, err := cliStub.stub.InvokeRpcBidiStream(buildContext(&req.Mds), methodDesc)
+	if err != nil {
+		emitErr(c.ctx, req.Id, nil, err)
+		return
+	}
+
+	streams[req.Id] = &stream{
+		methodMode: req.MethodMode,
+		methodDesc: methodDesc,
+		cli:        cliStub,
+		bidiStream: bidiStream,
+	}
 	go func(bidiStream *grpcdynamic.BidiStream) {
-		respMsg := cliStub.getResponseMessage(req.ServiceFullyName, req.MethodName)
+		respMsg := dynamic.NewMessage(methodDesc.GetOutputType())
 		for {
 			respMsg.Reset()
-			select {
-			case <-stubs[req.Id].srvStop:
-				runtime.Goexit()
-			default:
-				msg, err := bidiStream.RecvMsg()
-				fmt.Printf("srever stream: %v", msg)
-				if err == io.EOF {
-					emitResponse(c.ctx, req.Id, "", ParseMd(bidiStream.Trailer()), nil)
-					emitClose(c.ctx, req)
-					cliStub.close()
-					return
-				}
-				emitResponse(c.ctx, req.Id, cliStub.parseResponse(respMsg, &msg), nil, nil)
+
+			// block until response is received
+			msg, err := bidiStream.RecvMsg()
+			fmt.Printf("srever stream: %v, error: %v\n", msg, err)
+			if err == nil {
+				emitMsg(c.ctx, req.Id, parseResponse(methodDesc, &msg), nil)
+				return
 			}
+
+			if err == io.EOF {
+				emitMsg(c.ctx, req.Id, "", parsePairs(bidiStream.Trailer()))
+			}
+			emitClose(c.ctx, req.Id)
+			cliStub.close()
 		}
 	}(bidiStream)
 }

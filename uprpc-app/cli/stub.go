@@ -8,12 +8,12 @@ import (
 	"time"
 )
 
-type client struct {
+type clientStub struct {
 	stub *grpcdynamic.Stub
 	conn *grpc.ClientConn
 }
 
-func createStub(host string) (*client, error) {
+func createStub(host string) (*clientStub, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancel()
 	// create connect
@@ -24,13 +24,13 @@ func createStub(host string) (*client, error) {
 
 	// create stub
 	stub := grpcdynamic.NewStub(conn)
-	client := client{
+	client := clientStub{
 		stub: &stub,
 		conn: conn,
 	}
 	return &client, nil
 }
 
-func (c *client) close() {
+func (c *clientStub) close() {
 	_ = c.conn.Close()
 }

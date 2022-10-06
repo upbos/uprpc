@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/desc/protoparse"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
 	"google.golang.org/grpc"
@@ -54,7 +55,7 @@ type Client struct {
 type stream struct {
 	methodMode Mode
 	methodDesc *desc.MethodDescriptor
-	cli        *client
+	cli        *clientStub
 	cliStream  *grpcdynamic.ClientStream
 	srvStream  *grpcdynamic.ServerStream
 	bidiStream *grpcdynamic.BidiStream
@@ -112,6 +113,16 @@ func (c *Client) Stop(id string) {
 	stream.cli.close()
 }
 
+func findMethodDesc(path string, serviceFullyName string, methodName string) (*desc.MethodDescriptor, error) {
+	//  parse proto
+	p := protoparse.Parser{}
+	protoDesc, err := p.ParseFiles(path)
+	if err != nil {
+		return nil, err
+	}
+	return protoDesc[0].FindService(serviceFullyName).FindMethodByName(methodName), nil
+}
+
 func buildContext(mds *[]Metadata) context.Context {
 	md := buildPairs(*mds)
 	return metadata.NewOutgoingContext(context.Background(), md)
@@ -134,6 +145,7 @@ func (c *Client) invokeUnary(req *RequestData) {
 	cliStub, err := createStub(req.Host)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
+		emitClose(c.ctx, req.Id)
 		return
 	}
 
@@ -164,6 +176,7 @@ func (c *Client) invokeClientStream(req *RequestData) {
 	methodDesc, err := findMethodDesc(req.ProtoPath, req.ServiceFullyName, req.MethodName)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
+		emitClose(c.ctx, req.Id)
 		return
 	}
 
@@ -185,6 +198,7 @@ func (c *Client) invokeServerStream(req *RequestData) {
 	cliStub, err := createStub(req.Host)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
+		emitClose(c.ctx, req.Id)
 		return
 	}
 
@@ -228,17 +242,11 @@ func (c *Client) invokeServerStream(req *RequestData) {
 	}(srvStream)
 }
 
-func (c *Client) stopServerStream(id string) {
-	if stream, ok := streams[id]; ok {
-		emitClose(c.ctx, id)
-		stream.cli.close()
-	}
-}
-
 func (c *Client) invokeBidiStream(req *RequestData) {
 	cliStub, err := createStub(req.Host)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
+		emitClose(c.ctx, req.Id)
 		return
 	}
 
@@ -264,20 +272,23 @@ func (c *Client) invokeBidiStream(req *RequestData) {
 		respMsg := dynamic.NewMessage(methodDesc.GetOutputType())
 		for {
 			respMsg.Reset()
-
 			// block until response is received
 			msg, err := bidiStream.RecvMsg()
+
 			fmt.Printf("srever stream: %v, error: %v\n", msg, err)
 			if err == nil {
 				emitMsg(c.ctx, req.Id, parseResponse(methodDesc, &msg), nil)
-				return
+				continue
 			}
 
 			if err == io.EOF {
-				emitMsg(c.ctx, req.Id, "", parsePairs(bidiStream.Trailer()))
+				emitMsg(c.ctx, req.Id, parseResponse(methodDesc, &msg), parsePairs(bidiStream.Trailer()))
 			}
+			emitErr(c.ctx, req.Id, nil, err)
 			emitClose(c.ctx, req.Id)
 			cliStub.close()
+			break
 		}
 	}(bidiStream)
+	c.Push(req)
 }

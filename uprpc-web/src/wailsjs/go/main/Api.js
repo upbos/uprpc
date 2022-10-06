@@ -14,6 +14,10 @@ export function ParseProto(arg1, arg2) {
   return window['go']['main']['Api']['ParseProto'](arg1, arg2);
 }
 
+export function Push(arg1) {
+  return window['go']['main']['Api']['Push'](arg1);
+}
+
 export function Send(arg1) {
   return window['go']['main']['Api']['Send'](arg1);
 }

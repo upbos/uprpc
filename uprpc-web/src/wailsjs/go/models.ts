@@ -19,12 +19,12 @@ export namespace main {
 
 }
 
-export namespace client {
+export namespace cli {
 	
 	export class Metadata {
 	    id?: string;
 	    key?: string;
-	    value: number[];
+	    value?: number[];
 	    parseType?: number;
 	
 	    static createFrom(source: any = {}) {

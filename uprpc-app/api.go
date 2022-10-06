@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"uprpc/client"
+	"uprpc/cli"
 	"uprpc/proto"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -10,7 +10,7 @@ import (
 
 type Api struct {
 	ctx context.Context
-	cli *client.Client
+	cli *cli.Client
 }
 
 func newApi() *Api {
@@ -19,7 +19,7 @@ func newApi() *Api {
 
 func (api *Api) startup(ctx context.Context) {
 	api.ctx = ctx
-	api.cli = client.New(ctx)
+	api.cli = cli.New(ctx)
 }
 
 type R struct {
@@ -33,7 +33,6 @@ func (api *Api) OpenProto() R {
 }
 
 func (api *Api) OpenIncludeDir() R {
-
 	return R{Success: true, Data: proto.OpenIncludeDir(api.ctx)}
 }
 
@@ -46,9 +45,15 @@ func (api *Api) ParseProto(fileNames []string, includeDirs []string) R {
 	}
 }
 
-func (api *Api) Send(req client.RequestData) R {
+func (api *Api) Send(req cli.RequestData) R {
 	runtime.LogPrintf(api.ctx, "send request data: %+v", req)
 	api.cli.Send(&req)
+	return R{Success: true, Data: nil}
+}
+
+func (api *Api) Push(req cli.RequestData) R {
+	runtime.LogPrintf(api.ctx, "push request data: %+v", req)
+	api.cli.Push(&req)
 	return R{Success: true, Data: nil}
 }
 

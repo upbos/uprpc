@@ -1,4 +1,4 @@
-import {Method, Proto} from "@/types/types";
+import { Method, Proto } from "@/types/types";
 
 const INCLUDE_DIRS_KEY = "includeDirs";
 const PROTOS_KEY = "protos";
@@ -13,7 +13,7 @@ function getMethod(proto: Proto, serviceName: string, methodName: string): Metho
     return null;
 }
 
-function getProto(path: string): Proto | null {
+export function getProto(path: string): Proto | null {
     let protos = listProto();
     for (let proto of protos) {
         if (proto.path == path) {
@@ -58,7 +58,7 @@ export function reloadProto(proto: Proto): void {
         return;
     }
 
-    let mergedProto = {...proto, host: origProto.host};
+    let mergedProto = { ...proto, host: origProto.host };
     for (let method of mergedProto.methods) {
         let origMethod = getMethod(origProto, method.serviceName, method.name);
         if (origMethod == null) {
@@ -74,10 +74,10 @@ export function reloadProto(proto: Proto): void {
 
         for (let key in newParams) {
             if (origParams[key] != null) {
-                newParams[key] = origParams[key]
+                newParams[key] = origParams[key];
             }
         }
-        method.requestBody = JSON.stringify(newParams, null, '\t')
+        method.requestBody = JSON.stringify(newParams, null, "\t");
     }
 
     addProto(mergedProto);

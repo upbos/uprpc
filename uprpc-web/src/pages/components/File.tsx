@@ -50,6 +50,7 @@ const file = () => {
             if (proto.name.toLowerCase().indexOf(value.toLowerCase()) > -1) {
                 keys.add(proto.path);
             }
+
             for (let method of proto.methods) {
                 if (method.serviceName.toLowerCase().indexOf(value.toLowerCase()) > -1) {
                     keys.add(proto.path + method.serviceName);
@@ -224,7 +225,7 @@ const file = () => {
                 </Row>
 
             </Layout.Header>
-            <Layout.Content style={{backgroundColor: 'white'}}>
+            <Layout.Content style={{backgroundColor: 'white',overflow:'auto'}}>
                 <>
                     <Input size='small' placeholder='Filter Methods' hidden={!visible}
                            onChange={onChange}

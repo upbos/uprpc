@@ -1,10 +1,10 @@
-import {makeAutoObservable} from "mobx";
-import {Method, Mode, Proto, RequestCache, RequestData, ResponseCache, ResponseData} from "@/types/types";
+import { makeAutoObservable } from "mobx";
+import { Method, Mode, Proto, RequestCache, RequestData, ResponseCache, ResponseData } from "@/types/types";
 import * as storage from "./localStorage";
-import {OpenProto, ParseProto, Push, Send, Stop} from "@/wailsjs/go/main/Api";
-import {cli} from "@/wailsjs/go/models";
-import {EventsOn} from "@/wailsjs/runtime";
-import {req} from "pino-std-serializers";
+import { OpenProto, ParseProto, Push, Send, Stop } from "@/wailsjs/go/main/Api";
+import { cli } from "@/wailsjs/go/models";
+import { EventsOn } from "@/wailsjs/runtime";
+import { req } from "pino-std-serializers";
 
 export default class ProtoStore {
     constructor() {
@@ -51,21 +51,21 @@ export default class ProtoStore {
             let streams = responseCache.streams;
             if (streams == null) return;
             streams.unshift(value.body);
-            this.responseCaches.set(value.id, {...responseCache, streams: streams, mds: value.mds});
+            this.responseCaches.set(value.id, { ...responseCache, streams: streams, mds: value.mds });
         });
     }
 
-    * importProto(): any {
+    *importProto(): any {
         let res = yield OpenProto();
-        if (!res.success || res.data == null || res.data.length == 0) return {success: true};
+        if (!res.success || res.data == null || res.data.length == 0) return { success: true };
 
         res = yield ParseProto(res.data, storage.listIncludeDir());
         storage.addProtos(res.data);
         this.initProto();
-        return {success: true};
+        return { success: true };
     }
 
-    * reloadProto(): any {
+    *reloadProto(): any {
         let paths: string[] = [];
         storage.listProto().forEach((value) => paths.push(value.path));
         let res = yield ParseProto(paths, storage.listIncludeDir());
@@ -77,25 +77,27 @@ export default class ProtoStore {
         this.initProto();
     }
 
-    * deleteProto(id: string): any {
+    *deleteProto(id: string): any {
         storage.removeProto(id);
         this.initProto();
     }
 
-    * saveProto(proto: Proto, host: string, method: Method) {
+    *saveProto(proto: Proto, host: string, method: Method) {
         console.log("save proto method", method);
-        proto.host = host;
-        for (let i = 0; i < proto.methods.length; i++) {
-            let origMethod = proto.methods[i];
+        let origProto = storage.getProto(proto.path);
+        if (origProto == null) return;
+        origProto.host = host;
+        for (let i = 0; i < origProto.methods.length; i++) {
+            let origMethod = origProto.methods[i];
             if (origMethod.id == method.id) {
-                proto.methods[i] = method;
+                origProto.methods[i] = method;
             }
         }
-        storage.addProto(proto);
+        storage.addProto(origProto);
         this.initProto();
     }
 
-    * send(requestData: RequestData): any {
+    *send(requestData: RequestData): any {
         this.removeCache(requestData.id);
         if (requestData.methodMode != Mode.Unary) {
             this.runningCaches.set(requestData.id, true);
@@ -103,15 +105,14 @@ export default class ProtoStore {
         yield this.push(requestData, false);
     }
 
-    * push(requestData: RequestData, isPush: boolean): any {
-
+    *push(requestData: RequestData, isPush: boolean): any {
         let requestCache = this.requestCaches.get(requestData.id);
         if (requestCache == null) {
-            this.requestCaches.set(requestData.id, {streams: [requestData.body]});
+            this.requestCaches.set(requestData.id, { streams: [requestData.body] });
         } else {
             let streams = requestCache.streams;
             streams?.unshift(requestData.body);
-            this.requestCaches.set(requestData.id, {streams: streams});
+            this.requestCaches.set(requestData.id, { streams: streams });
         }
         requestData.includeDirs = storage.listIncludeDir();
         if (isPush) {
@@ -120,17 +121,16 @@ export default class ProtoStore {
             console.log("send request data", requestData);
             yield Send(new cli.RequestData(requestData));
         }
-
     }
 
-    * removeCache(methodId: string): any {
+    *removeCache(methodId: string): any {
         // 清空缓存
         this.requestCaches.delete(methodId);
         this.responseCaches.delete(methodId);
         this.runningCaches.delete(methodId);
     }
 
-    * stopStream(methodId: string) {
+    *stopStream(methodId: string) {
         console.log("request stop stream");
         yield Stop(methodId);
         this.runningCaches.set(methodId, false);

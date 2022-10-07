@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"path"
+	"syscall"
+	"uprpc/pkg/file"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/jhump/protoreflect/desc"
@@ -86,7 +90,7 @@ func (c *Client) Send(req *RequestData) {
 
 func (c *Client) Push(req *RequestData) {
 	if stream, ok := streams[req.Id]; ok {
-		methodDesc, _ := findMethodDesc(req.ProtoPath, req.ServiceFullyName, req.MethodName)
+		methodDesc, _ := findMethodDesc(req.ProtoPath, req.IncludeDirs, req.ServiceFullyName, req.MethodName)
 		if req.MethodMode == ClientStream {
 			stream.cliStream.SendMsg(buildRequest(methodDesc, req.Body))
 		}
@@ -122,14 +126,29 @@ func close(ctx context.Context, id string) {
 	}
 }
 
-func findMethodDesc(path string, serviceFullyName string, methodName string) (*desc.MethodDescriptor, error) {
+func findMethodDesc(protoPath string, includeDirs []string, serviceFullyName string, methodName string) (*desc.MethodDescriptor, error) {
 	//  parse proto
 	p := protoparse.Parser{}
-	protoDesc, err := p.ParseFiles(path)
+	p.Accessor = func(filename string) (io.ReadCloser, error) {
+		fmt.Printf("Accessor filename: %v \n", filename)
+		lookupFile := lookupFile(filename, append(includeDirs, path.Dir(protoPath)))
+		return os.OpenFile(lookupFile, syscall.O_RDONLY, 0)
+	}
+	protoDesc, err := p.ParseFiles(protoPath)
 	if err != nil {
 		return nil, err
 	}
 	return protoDesc[0].FindService(serviceFullyName).FindMethodByName(methodName), nil
+}
+
+func lookupFile(fileName string, includeDirs []string) string {
+	for _, dir := range includeDirs {
+		joinFile := path.Join(dir, fileName)
+		if ok, _ := file.ExistPath(joinFile); ok {
+			return joinFile
+		}
+	}
+	return fileName
 }
 
 func buildContext(mds *[]Metadata) context.Context {
@@ -158,7 +177,7 @@ func (c *Client) invokeUnary(req *RequestData) {
 		return
 	}
 
-	methodDesc, err := findMethodDesc(req.ProtoPath, req.ServiceFullyName, req.MethodName)
+	methodDesc, err := findMethodDesc(req.ProtoPath, req.IncludeDirs, req.ServiceFullyName, req.MethodName)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
 		cliStub.close()
@@ -185,7 +204,7 @@ func (c *Client) invokeClientStream(req *RequestData) {
 		return
 	}
 
-	methodDesc, err := findMethodDesc(req.ProtoPath, req.ServiceFullyName, req.MethodName)
+	methodDesc, err := findMethodDesc(req.ProtoPath, req.IncludeDirs, req.ServiceFullyName, req.MethodName)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
 		close(c.ctx, req.Id)
@@ -215,7 +234,7 @@ func (c *Client) invokeServerStream(req *RequestData) {
 		return
 	}
 
-	methodDesc, err := findMethodDesc(req.ProtoPath, req.ServiceFullyName, req.MethodName)
+	methodDesc, err := findMethodDesc(req.ProtoPath, req.IncludeDirs, req.ServiceFullyName, req.MethodName)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
 		close(c.ctx, req.Id)
@@ -247,7 +266,7 @@ func (c *Client) invokeBidiStream(req *RequestData) {
 		return
 	}
 
-	methodDesc, err := findMethodDesc(req.ProtoPath, req.ServiceFullyName, req.MethodName)
+	methodDesc, err := findMethodDesc(req.ProtoPath, req.IncludeDirs, req.ServiceFullyName, req.MethodName)
 	if err != nil {
 		emitErr(c.ctx, req.Id, nil, err)
 		close(c.ctx, req.Id)

@@ -92,6 +92,10 @@ const file = () => {
                 icon: <FileOutlined/>,
                 children: []
             };
+            
+            if (!proto.methods) {
+                continue;
+            }
 
             let serviceMap: Map<any, any[]> = new Map<any, any[]>();
             proto.methods.forEach((method, index, array) => {

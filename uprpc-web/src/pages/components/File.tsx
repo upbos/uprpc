@@ -88,11 +88,13 @@ const file = () => {
         for (let proto of protos) {
             let item: any = {
                 id: proto.path,
+                isProto: true,
+                name: proto.name,
                 title: <span style={{width: '100%'}}>{getTitle(proto.name, searchValue)}</span>,
                 icon: <FileOutlined/>,
                 children: []
             };
-            
+
             if (!proto.methods) {
                 continue;
             }
@@ -104,7 +106,11 @@ const file = () => {
                     methods = [];
                 }
                 methods.push({
-                    ...method,
+                    proto: {
+                        path: proto.path,
+                        host: proto.host
+                    },
+                    method: method,
                     title: getTitle(method.name, searchValue),
                     icon: <BlockOutlined/>
                 });
@@ -128,14 +134,13 @@ const file = () => {
 
     const onSelect = (selectedKeys: Key[], e: any) => {
         setDeleteProto(undefined);
-        let pos = e.node.pos.split('-');
-        if (pos.length == 2) {
-            let proto = protoStore.protos[pos[1]];
-            setDeleteProto({id: proto.path, name: proto.name})
-        } else if (pos.length == 4) {
+        if (e.node.isProto) {
+            setDeleteProto({id: e.node.id, name: e.node.name})
+        }
+        if (e.node.method) {
             tabStore.openTab({
                 key: selectedKeys[0].toString(),
-                params: e.node.pos,
+                params: {proto: e.node.proto, method: e.node.method},
                 type: TabType.Proto,
             });
         }

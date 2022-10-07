@@ -32,11 +32,8 @@ const tabs = () => {
         let children = <></>;
         let label = tab.title;
         if (tab.type == TabType.Proto) {
-            let posArr = tab.params.split('-').map(Number);
-            let proto = protoStore.protos[posArr[1]];
-            let method = proto.methods[posArr[3]];
-            label = method.name;
-            children = <Editor proto={proto} method={method}/>
+            label = tab.params.method.name;
+            children = <Editor proto={tab.params.proto} method={tab.params.method}/>
         }
         return {
             label: <Badge dot={tab.dot} offset={[5, 8]}>{label}</Badge>,

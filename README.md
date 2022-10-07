@@ -38,9 +38,7 @@ cd ../uprpc-app/scripts
 
 ## 预览
 <p align="center">
-<video width="320" height="240" controls>
-  <source src="./uprpc-web/src/assets/uprpc-preview.mp4" type="video/mp4">
-</video>
+    <img width="936" src="./uprpc-web/src/assets/preview.gif">
 </p>
 
 ## 贡献者

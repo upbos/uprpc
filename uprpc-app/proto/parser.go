@@ -12,12 +12,13 @@ import (
 	"syscall"
 	"uprpc/pkg/file"
 
+	osruntime "runtime"
+
 	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
 	uuid "github.com/satori/go.uuid"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
-	osruntime "runtime"
 )
 
 var b2i = map[bool]int8{false: 0, true: 1}
@@ -121,7 +122,7 @@ func lookupFile(fileName string, includeDirs []string) string {
 }
 
 func parseMethod(services []*desc.ServiceDescriptor) []*Method {
-	var methods []*Method
+	var methods = []*Method{}
 	for _, service := range services {
 		for _, method := range service.GetMethods() {
 			fieldValue := parseMessageFields(method.GetInputType())

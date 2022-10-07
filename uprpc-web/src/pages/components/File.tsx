@@ -1,6 +1,6 @@
 import React, {Key, useContext, useState} from "react";
 import {observer} from "mobx-react-lite";
-import {Col, Empty, Input, Layout, message, Modal, notification, Row, Space, Tabs, Tooltip, Tree} from "antd";
+import {Col, Empty, Input, Layout, message, Modal, notification, Row, Space, Tooltip, Tree} from "antd";
 import {
     BlockOutlined,
     CloseCircleOutlined,
@@ -9,15 +9,14 @@ import {
     FileOutlined,
     FilterOutlined,
     FolderOutlined,
-    HddOutlined,
     PlusCircleOutlined,
-    ReloadOutlined,
-    SettingOutlined
+    ReloadOutlined
 } from "@ant-design/icons";
 import {context} from "@/stores/context";
 import {Proto, TabType} from "@/types/types";
 import IncludeDir from "@/pages/components/IncludeDir";
 import * as storage from '@/stores/localStorage';
+import styles from '../style.less';
 
 interface DeleteProto {
     id: string;
@@ -181,38 +180,6 @@ const file = () => {
     };
 
     let datasource = parse(protoStore.protos);
-    const items = [{
-        label: (<Space direction='vertical' size={0} align={"center"}>
-            <HddOutlined style={{fontSize: 20, marginRight: 0}}/>
-            <div style={{fontSize: 10}}>GRPC</div>
-        </Space>),
-        key: '1', children: <>
-            <Input size='small' placeholder='Filter Methods' hidden={!visible}
-                   onChange={onChange}
-                   value={searchValue}
-                   style={{marginBottom: 5}}/>
-            {datasource.length == 0 ?
-                <div style={{height: '90%', display: 'flex', justifyContent: 'center', alignItems: 'center'}}><Empty
-                    description='No proto'/></div> :
-                <Tree.DirectoryTree
-                    // @ts-ignore
-                    onExpand={onExpand}
-                    fieldNames={{key: 'id', title: 'title', children: 'children'}}
-                    expandedKeys={expandedKeys}
-                    autoExpandParent={autoExpandParent}
-                    onSelect={onSelect}
-                    switcherIcon={<DownOutlined/>}
-                    defaultExpandedKeys={['0-0-0']}
-                    treeData={datasource}/>}</>
-    }/*, {
-        label: (<Space direction='vertical' size={0}>
-            <SettingOutlined style={{fontSize: 20, marginRight: 0}}/>
-            <div style={{fontSize: 10}}>ENV</div>
-        </Space>),
-        key: '2',
-        children: 'Please look forward to it!'
-    }*/];
-
     return (
         <Layout style={{height: '100%'}}>
             <Layout.Header style={{
@@ -227,21 +194,20 @@ const file = () => {
                     <Col flex="100px">
                         <Space size={8} style={{paddingRight: 10}}>
                             <Tooltip title='Import protos'>
-                                <a style={{color: '#000000D9', fontSize: 16}}
-                                   onClick={onImport}><PlusCircleOutlined/></a>
+                                <a className={styles.operatorBtn} onClick={onImport}><PlusCircleOutlined/></a>
                             </Tooltip>
                             <Tooltip title='Reload protos'>
-                                <a style={{color: '#000000D9', fontSize: 16}} onClick={onReload}><ReloadOutlined/></a>
+                                <a className={styles.operatorBtn} onClick={onReload}><ReloadOutlined/></a>
                             </Tooltip>
                             <Tooltip title='Delete selectecd proto'>
-                                <a style={{color: '#000000D9', fontSize: 16}} onClick={onDelete}><DeleteOutlined/></a>
+                                <a className={styles.operatorBtn} onClick={onDelete}><DeleteOutlined/></a>
                             </Tooltip>
                             <Tooltip title='Import dependency paths'>
-                                <a style={{color: '#000000D9', fontSize: 16}}
+                                <a className={styles.operatorBtn}
                                    onClick={() => includeDirStore.showIncludeDir(!includeDirStore.includeDirDrawerVisible)}><FolderOutlined/></a>
                             </Tooltip>
                             <Tooltip title='Filter methods'>
-                                <a style={{color: '#000000D9', fontSize: 16}}
+                                <a className={styles.operatorBtn}
                                    onClick={() => showSearchBox(!visible)}><FilterOutlined/></a>
                             </Tooltip>
                         </Space>
@@ -250,7 +216,25 @@ const file = () => {
 
             </Layout.Header>
             <Layout.Content style={{backgroundColor: 'white'}}>
-                <Tabs tabPosition='left' size='small' style={{height: '100%'}} items={items}/>
+                <>
+                    <Input size='small' placeholder='Filter Methods' hidden={!visible}
+                           onChange={onChange}
+                           value={searchValue}
+                           style={{marginBottom: 5}}/>
+                    {datasource.length == 0 ?
+                        <div style={{height: '90%', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+                            <Empty
+                                description='No proto'/></div> :
+                        <Tree.DirectoryTree
+                            // @ts-ignore
+                            onExpand={onExpand}
+                            fieldNames={{key: 'id', title: 'title', children: 'children'}}
+                            expandedKeys={expandedKeys}
+                            autoExpandParent={autoExpandParent}
+                            onSelect={onSelect}
+                            switcherIcon={<DownOutlined/>}
+                            defaultExpandedKeys={['0-0-0']}
+                            treeData={datasource}/>}</>
                 <IncludeDir/>
             </Layout.Content>
         </Layout>

@@ -1,6 +1,7 @@
-import {Modal} from "antd";
+import {Button, Modal, Result} from "antd";
 import React, { useEffect, useState} from "react";
 import {EventsOn} from "@/wailsjs/runtime";
+import {PlusOutlined, SmileOutlined} from "@ant-design/icons";
 
 export default () => {
     useEffect(function () {
@@ -18,9 +19,10 @@ export default () => {
     };
 
     return (<Modal title="About UpRpc" open={isModalOpen} onCancel={handleCancel} footer={null}>
-        <p>Icon</p>
-        <p>UpRpc</p>
-        <p>Version 1.0.0</p>
-        <p>Copyright (c) 2022 UpUpc. All rights reserved.</p>
+        <Result
+            icon={<SmileOutlined style={{fontSize: 50}}/>}
+            title="UpRpc"
+            subTitle={<div>version 1.0.0<br/>Copyright (c) 2022 upbos. All rights reserved.</div>}/>
+
     </Modal>)
 }

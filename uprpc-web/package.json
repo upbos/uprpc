@@ -11,21 +11,21 @@
   },
   "dependencies": {
     "@ant-design/icons": "^4.7.0",
-    "@umijs/plugins": "^4.0.11",
-    "ace-builds": "^1.10.1",
+    "@umijs/plugins": "^4.0.24",
+    "ace-builds": "^1.11.2",
     "allotment": "^1.17.0",
-    "antd": "^4.23.1",
+    "antd": "^4.23.4",
     "js-base64": "^3.7.2",
     "mobx": "^6.6.2",
     "mobx-react-lite": "^3.4.0",
     "react-ace": "^10.1.0",
-    "umi": "^4.0.19",
+    "umi": "^4.0.24",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
-    "@types/react": "^18.0.16",
+    "@types/react": "^18.0.21",
     "@types/react-dom": "^18.0.6",
     "@types/uuid": "^8.3.4",
-    "typescript": "^4.1.6"
+    "typescript": "^4.8.4"
   }
 }

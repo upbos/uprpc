@@ -9,3 +9,6 @@ uprpc-web/.idea
 .DS_Store?
 uprpc-app/.idea
 .github/workflows/.secrets
+frontend/package.json.md5
+frontend/src/.umi-production/
+frontend/src/.umi/

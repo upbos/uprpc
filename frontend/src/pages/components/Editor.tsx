@@ -104,9 +104,9 @@ const editor = ({proto, method: initMethod}: EditorProp) => {
                     <Col flex="160px">
                         <Space>
                             {running ?
-                                <Button type='primary' icon={<PoweroffOutlined/>} onClick={onStop}>Stop2</Button> :
+                                <Button type='primary' icon={<PoweroffOutlined/>} onClick={onStop}>Stop</Button> :
                                 (method.mode == Mode.Unary ?
-                                    <Button type='primary' icon={<SendOutlined/>} onClick={onSend}>Send2</Button>
+                                    <Button type='primary' icon={<SendOutlined/>} onClick={onSend}>Send</Button>
                                     : <Button type='primary' icon={<PlayCircleOutlined/>}
                                               onClick={onSend}>Start</Button>)}
                             <Button icon={<SaveOutlined/>}

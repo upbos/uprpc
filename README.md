@@ -47,3 +47,4 @@ cd uprpc/scripts
 - react
 - ant design
 - grpc
+- wails

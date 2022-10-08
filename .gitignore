@@ -1,14 +1,10 @@
 node_modules
 build
-/uprpc-mock/dist
-uprpc-mock/dist/helloService.js
-uprpc-web/src/wailsjs/go/models.ts
-uprpc-web/.idea
 .DS_Store
 /**/.DS_Store
 .DS_Store?
 uprpc-app/.idea
 .github/workflows/.secrets
-frontend/package.json.md5
-frontend/src/.umi-production/
-frontend/src/.umi/
+package.json.md5
+/frontend/src/.umi/
+/frontend/src/.umi-production/

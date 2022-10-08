@@ -19,7 +19,7 @@
         "src/.umi/*"
       ],
       "umi": [
-        "/Users/jason/dev/upbos/uprpc/uprpc-app/frontend/node_modules/umi"
+        "/Users/jason/dev/upbos/uprpc/frontend/node_modules/umi"
       ],
       "umi/typings": [
         "src/.umi/typings"

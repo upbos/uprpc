@@ -7,8 +7,6 @@ export function encode(value: any, parseType: number) {
 
     let view = new DataView(new ArrayBuffer(16));
     switch (parseType) {
-        // case ParseType.IntLE:
-        // case ParseType.IntBE:
         case ParseType.Int8:
             view.setInt8(0, value);
             break;
@@ -36,8 +34,6 @@ export function encode(value: any, parseType: number) {
         case ParseType.DoubleBE:
             view.setFloat64(0, value, false);
             break;
-        // case ParseType.UintLE:
-        // case ParseType.UintBE:
         case ParseType.Uint8:
             view.setUint8(0, value);
             break;

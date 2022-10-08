@@ -4,7 +4,6 @@ import React, {useContext, useState} from "react";
 import {Allotment} from "allotment";
 import {
     ApiOutlined, CloseCircleOutlined,
-    FilePptOutlined,
     PlayCircleOutlined,
     PoweroffOutlined,
     SaveOutlined,

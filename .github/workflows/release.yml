@@ -52,11 +52,10 @@ jobs:
             # You may need to manually build you frontend here, unless you have configured frontend build and install commands in wails.json.
             - name: Get Wails
               run: |
-                  cd ./uprpc-app
                   go install github.com/wailsapp/wails/v2/cmd/wails@latest
-            - name: Build uprpc-app
+            - name: Build uprpc app
               run: |
-                  cd ./uprpc-app/scripts
+                  cd ./scripts
                   ./build.sh ${{ matrix.platform }}
             - name: Import Code-Signing Certificates for macOS
               if: matrix.goos == 'darwin'
@@ -70,7 +69,6 @@ jobs:
               if: matrix.goos == 'darwin'
               run: |
                   echo "Signing Package"
-                  cd ./uprpc-app
                   mkdir ./build/release
                   gon -log-level=info ./scripts/mac-sign.json    
                   appdmg ./scripts/mac-dmg.json ./build/release/uprpc-${{ matrix.goos }}-${{ matrix.goarch }}.dmg       
@@ -80,7 +78,6 @@ jobs:
               if: matrix.goos != 'darwin'
               run: |
                   echo "Zip Package"
-                  cd ./uprpc-app
                   mkdir ./build/release
                   cd ./build/bin
                   rename "s/uprpc/uprpc-${{ matrix.goos }}-${{ matrix.goarch }}/" *
@@ -91,7 +88,7 @@ jobs:
               uses: actions/upload-artifact@v2
               with:
                   name: ${{ matrix.os }}
-                  path: uprpc-app/build/release/*
+                  path: build/release/*
 
             - name: Sign Windows binaries
               if: matrix.os == 'windows-latest'
@@ -107,12 +104,12 @@ jobs:
               uses: actions/upload-artifact@v2
               with:
                   name: ${{ matrix.os }}
-                  path: uprpc-app/build/release/*
+                  path: build/release/*
 
             - name: release
               uses: softprops/action-gh-release@v0.1.14
               if: startsWith(github.ref, 'refs/tags/')
               with:
-                  files: "uprpc-app/build/release/**"
+                  files: "build/release/**"
               env:
                   GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}

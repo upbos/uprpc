@@ -38,7 +38,7 @@ cd ../uprpc-app/scripts
 
 ## 预览
 <p align="center">
-    <img width="936" src="./uprpc-web/src/assets/preview.gif">
+    <img width="936" src="./frontend/src/assets/preview.gif">
 </p>
 
 ## 贡献者

@@ -25,6 +25,14 @@ jobs:
                     - platform: windows/arm64
                       goarch: arm64
                       goos: windows
+                    - os: ubuntu-latest
+                      platform: linux/arm64
+                      goarch: arm64
+                      goos: darlinuxwin
+                    - os: ubuntu-latest
+                      platform: linux/amd64
+                      goarch: amd64
+                      goos: linux
         runs-on: ${{ matrix.os }}
         steps:
             - uses: actions/checkout@v2

@@ -66,7 +66,6 @@ const file = () => {
     const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const {value} = e.target;
         let keys = getExpandedKeys(value);
-        console.log(value, keys)
         setExpandedKeys(keys);
         setSearchValue(value);
         setAutoExpandParent(true);

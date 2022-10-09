@@ -1,7 +1,5 @@
 import React, {useState} from "react";
-import {Button, Collapse, Empty} from "antd";
-import "ace-builds/src-noconflict/mode-json";
-import "ace-builds/src-noconflict/ext-language_tools"
+import {Collapse, Empty} from "antd";
 
 interface StreamProps {
     value?: string[]

@@ -29,6 +29,7 @@ export default ({running, method, requestCache, onChange, onPush}: requestProps)
 
     const [mds, setMds] = useState(method.requestMds == null ? [] : method.requestMds);
     const onEdit = (metadata: Metadata) => {
+        // @ts-ignore
         mds[metadata.id] = metadata;
         setMds([...mds])
         if (onChange) {
@@ -37,7 +38,7 @@ export default ({running, method, requestCache, onChange, onPush}: requestProps)
     }
 
     const onAdd = () => {
-        mds.push({parseType: 0, id: mds.length, key: '', value: ''});
+        mds.push({parseType: 0, id: "" + mds.length, key: '', value: ''});
         setMds([...mds]);
     }
 

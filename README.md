@@ -25,20 +25,14 @@ English | [简体中文](./README-zh_CN.md)
 ```
 git clone https://github.com/upbos/uprpc.git
 
-cd uprpc/uprpc-web
-
-yarn install 
-
-yarn build
-
-cd ../uprpc-app/scripts 
+cd uprpc/scripts 
 
 ./build-macos-arm.sh
 ```
 
 ## 预览
 <p align="center">
-    <img width="936" src="./uprpc-web/src/assets/preview.gif">
+    <img width="936" src="./frontend/src/assets/preview.gif">
 </p>
 
 ## 贡献者
@@ -53,3 +47,4 @@ cd ../uprpc-app/scripts
 - react
 - ant design
 - grpc
+- wails

@@ -1,8 +1,5 @@
 import React from "react";
 import {Col, Row, Select, Table, Tabs} from "antd";
-import AceEditor from "react-ace";
-import "ace-builds/src-noconflict/mode-json";
-import "ace-builds/src-noconflict/ext-language_tools"
 import Stream from "@/pages/components/Stream";
 import {Method, Mode, parseTypeMap, ResponseCache} from "@/types/types";
 import {decode} from "@/utils/metadata";
@@ -58,29 +55,7 @@ export default ({method, responseCache, onChange}: responseProps) => {
     const tab = method.mode == Mode.ServerStream || method.mode == Mode.BidirectionalStream ?
         {key: 'response', label: 'Response Stream', children: <Stream value={responseCache?.streams}/>} : {
             key: ' response', label: 'Response',
-            children: <AceEditor
-                style={{background: "#fff"}}
-                width={"100%"}
-                height='100%'
-                mode="json"
-                theme="textmate"
-                name="inputs"
-                fontSize={13}
-                cursorStart={2}
-                highlightActiveLine={false}
-                showPrintMargin={false}
-                showGutter={false}
-                value={responseCache?.body}
-                setOptions={{
-                    showLineNumbers: false,
-                    highlightGutterLine: false,
-                    fixedWidthGutter: false,
-                    tabSize: 1,
-                    displayIndentGuides: false
-                }}
-                readOnly={true}
-                tabSize={2}
-            />
+            children: responseCache?.body
         }
 
     console.log("responseCache: ", responseCache)

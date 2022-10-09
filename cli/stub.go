@@ -14,7 +14,7 @@ type clientStub struct {
 }
 
 func createStub(host string) (*clientStub, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancel()
 	// create connect
 	conn, err := grpc.DialContext(ctx, host, grpc.WithInsecure(), grpc.WithBlock())

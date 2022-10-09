@@ -8,3 +8,4 @@ uprpc-app/.idea
 package.json.md5
 /frontend/src/.umi/
 /frontend/src/.umi-production/
+frontend/yarn.lock

@@ -55,7 +55,7 @@ export default ({method, responseCache, onChange}: responseProps) => {
     const tab = method.mode == Mode.ServerStream || method.mode == Mode.BidirectionalStream ?
         {key: 'response', label: 'Response Stream', children: <Stream value={responseCache?.streams}/>} : {
             key: ' response', label: 'Response',
-            children: responseCache?.body
+            children: <pre>{responseCache?.body}</pre>
         }
 
     console.log("responseCache: ", responseCache)

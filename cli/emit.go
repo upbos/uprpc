@@ -2,6 +2,8 @@ package cli
 
 import (
 	"context"
+	"log"
+
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -11,6 +13,7 @@ func emitMsg(ctx context.Context, id string, message string, mds []Metadata) {
 		Body: message,
 		Mds:  mds,
 	}
+	log.Printf("return data:%v", respData)
 	runtime.EventsEmit(ctx, "data", respData)
 }
 

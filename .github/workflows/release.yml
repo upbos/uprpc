@@ -50,6 +50,12 @@ jobs:
                   brew install mitchellh/gon/gon
                   brew install rename
                   npm install -g appdmg
+            - name: Install required package for Linux
+              if: matrix.os == 'ubuntu-latest'
+              run: |
+                  sudo apt install libgtk-3-dev -y
+                  sudo apt install libwebkit2ggtk-4.0-dev  -y
+                  sudo apt install npm  -y
             # - name: Build uprpc-web
             #   run: |
             #       cd ./uprpc-web

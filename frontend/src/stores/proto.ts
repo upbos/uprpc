@@ -5,7 +5,7 @@ import { OpenProto, ParseProto, Push, Send, Stop } from "@/wailsjs/go/main/Api";
 import { cli } from "@/wailsjs/go/models";
 import { EventsOn } from "@/wailsjs/runtime";
 import { req } from "pino-std-serializers";
-import {message} from "antd";
+import { message } from "antd";
 
 export default class ProtoStore {
     constructor() {
@@ -69,7 +69,9 @@ export default class ProtoStore {
     *reloadProto(): any {
         let paths: string[] = [];
         storage.listProto().forEach((value) => paths.push(value.path));
+        console.log("reload proto req:", paths);
         let res = yield ParseProto(paths, storage.listIncludeDir());
+        console.log("reload proto :", res);
         if (!res.success) {
             console.log("reload proto error");
             return;
@@ -96,7 +98,7 @@ export default class ProtoStore {
         }
         storage.addProto(origProto);
         this.initProto();
-        message.success("Save configuration successfully.")
+        message.success("Save configuration successfully.");
     }
 
     *send(requestData: RequestData): any {

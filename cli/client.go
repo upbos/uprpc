@@ -14,6 +14,7 @@ import (
 	"github.com/jhump/protoreflect/desc/protoparse"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/runtime/protoiface"
@@ -76,6 +77,7 @@ func New(ctx context.Context) *Client {
 }
 
 func (c *Client) Send(req *RequestData) {
+	logrus.Debugf("send req: %v", req)
 	switch req.MethodMode {
 	case Unary:
 		c.invokeUnary(req)

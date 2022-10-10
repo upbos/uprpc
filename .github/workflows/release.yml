@@ -25,6 +25,14 @@ jobs:
                     - platform: windows/arm64
                       goarch: arm64
                       goos: windows
+                    - os: ubuntu-latest
+                      platform: linux/arm64
+                      goarch: arm64
+                      goos: darlinuxwin
+                    - os: ubuntu-latest
+                      platform: linux/amd64
+                      goarch: amd64
+                      goos: linux
         runs-on: ${{ matrix.os }}
         steps:
             - uses: actions/checkout@v2
@@ -32,16 +40,21 @@ jobs:
               uses: actions/setup-go@v2
               with:
                   go-version: ${{ matrix.go-version }}
-            # - name: setup node
-            #   uses: actions/setup-node@v2
-            #   with:
-            #       node-version: 16.13.1
+            - name: setup node
+              uses: actions/setup-node@v2
+              with:
+                  node-version: 16.13.1
             - name: MacOS download gon for code signing and app notarization
               if: matrix.os == 'macos-latest'
               run: |
                   brew install mitchellh/gon/gon
                   brew install rename
                   npm install -g appdmg
+            - name: Install required package for Linux
+              if: matrix.os == 'ubuntu-latest'
+              run: |
+                  sudo apt-get install libgtk-3-dev -y
+                  sudo apt-get install libwebkit2ggtk-4.0-dev  -y
             # - name: Build uprpc-web
             #   run: |
             #       cd ./uprpc-web

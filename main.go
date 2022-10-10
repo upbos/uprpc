@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"embed"
+	_ "net/http/pprof"
+	"uprpc/pkg/logger"
+
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
-	_ "net/http/pprof"
 )
 
 //go:embed frontend/dist
@@ -13,6 +15,7 @@ var assets embed.FS
 var gCtx context.Context
 
 func main() {
+	logger.Setup()
 	newApi := newApi()
 	// Create application with options
 	err := wails.Run(&options.App{

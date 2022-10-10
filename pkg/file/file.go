@@ -2,6 +2,7 @@ package file
 
 import (
 	"os"
+	"os/user"
 	"path/filepath"
 )
 
@@ -49,4 +50,11 @@ func ExistPath(p string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+func GetHomeDir() string {
+	if currentUser, err := user.Current(); err == nil {
+		return currentUser.HomeDir
+	}
+	return ""
 }

@@ -58,9 +58,9 @@ export default class ProtoStore {
     *importProto(): any {
         let res = yield OpenProto();
         if (!res.success || res.data == null || res.data.length == 0) return { success: true };
-
+        console.log("reload proto req:", res.data);
         res = yield ParseProto(res.data, storage.listIncludeDir());
-        debugger
+        console.log("reload proto :", res);
         storage.addProtos(res.data);
         this.initProto();
         return { success: true };
@@ -69,7 +69,9 @@ export default class ProtoStore {
     *reloadProto(): any {
         let paths: string[] = [];
         storage.listProto().forEach((value) => paths.push(value.path));
+        console.log("reload proto req:", paths);
         let res = yield ParseProto(paths, storage.listIncludeDir());
+        console.log("reload proto :", res);
         if (!res.success) {
             console.log("reload proto error");
             return;

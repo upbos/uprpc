@@ -16,7 +16,14 @@ English | [简体中文](./README-zh_CN.md)
 - 支持多Tab操作
 - 支持自定义配置持久化
 
-## 📦 安装
+## 路线图
+
+- v 1.1.0
+  - 支持环境变量
+- v 1.2.0
+  - 支持SSL/TLS
+
+## 安装
 支持Windows、Macos和Linux.
 
 可以从[发布页面](https://github.com/upbos/uprpc/releases)下载可执行文件安装。

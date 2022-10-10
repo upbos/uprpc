@@ -83,7 +83,8 @@ const editor = ({proto, method: initMethod}: EditorProp) => {
 
     const onSave = () => {
         protoStore.saveProto(proto, host, method);
-        tabStore.setDot(method.id, false)
+        tabStore.setDot(method.id, false);
+
     }
 
     let requestCache = protoStore.requestCaches.get(method.id);

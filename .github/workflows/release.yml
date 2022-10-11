@@ -54,7 +54,8 @@ jobs:
               if: matrix.os == 'ubuntu-22.04'
               run: |
                   sudo apt install libgtk-3-dev -y
-                  sudo apt install libwebkit2gtk-4.0-dev  -y
+                  sudo apt install libwebkit2gtk-4.0-dev -y
+                  sudo apt install rename -y
             # - name: Build uprpc-web
             #   run: |
             #       cd ./uprpc-web

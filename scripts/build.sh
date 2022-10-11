@@ -1,6 +1,7 @@
 #! /bin/bash
 
 echo -e "Start running the script..."
+export PATH=/usr/local/go/bin:$GOPATH/bin:$PATH
 cd ../
 
 echo -e "Start building the app..."

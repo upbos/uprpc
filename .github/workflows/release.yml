@@ -65,7 +65,8 @@ jobs:
             # You may need to manually build you frontend here, unless you have configured frontend build and install commands in wails.json.
             - name: Get Wails
               run: |
-                  go install github.com/wailsapp/wails/v2/cmd/wails@latest
+                  cd ./scripts
+                  ./install-wails-cli.sh
             - name: Build uprpc app
               run: |
                   cd ./scripts

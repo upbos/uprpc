@@ -25,10 +25,10 @@ jobs:
                     - platform: windows/arm64
                       goarch: arm64
                       goos: windows
-                    - os: ubuntu-22.04
-                      platform: linux/arm64
-                      goarch: arm64
-                      goos: linux
+                    # - os: ubuntu-22.04
+                    #   platform: linux/arm64
+                    #   goarch: arm64
+                    #   goos: linux
                     - os: ubuntu-22.04
                       platform: linux/amd64
                       goarch: amd64

@@ -25,11 +25,11 @@ jobs:
                     - platform: windows/arm64
                       goarch: arm64
                       goos: windows
-                    - os: ubuntu-latest
-                      platform: linux/arm64
-                      goarch: arm64
-                      goos: darlinuxwin
-                    - os: ubuntu-latest
+                    # - os: ubuntu-22.04
+                    #   platform: linux/arm64
+                    #   goarch: arm64
+                    #   goos: linux
+                    - os: ubuntu-22.04
                       platform: linux/amd64
                       goarch: amd64
                       goos: linux
@@ -51,10 +51,11 @@ jobs:
                   brew install rename
                   npm install -g appdmg
             - name: Install required package for Linux
-              if: matrix.os == 'ubuntu-latest'
+              if: matrix.os == 'ubuntu-22.04'
               run: |
-                  sudo apt-get install libgtk-3-dev -y
-                  sudo apt-get install libwebkit2ggtk-4.0-dev  -y
+                  sudo apt install libgtk-3-dev -y
+                  sudo apt install libwebkit2gtk-4.0-dev -y
+                  sudo apt install rename -y
             # - name: Build uprpc-web
             #   run: |
             #       cd ./uprpc-web
@@ -65,7 +66,8 @@ jobs:
             # You may need to manually build you frontend here, unless you have configured frontend build and install commands in wails.json.
             - name: Get Wails
               run: |
-                  go install github.com/wailsapp/wails/v2/cmd/wails@latest
+                  cd ./scripts
+                  ./install-wails-cli.sh
             - name: Build uprpc app
               run: |
                   cd ./scripts

@@ -39,7 +39,7 @@ func (api *Api) OpenIncludeDir() R {
 func (api *Api) ParseProto(fileNames []string, includeDirs []string) R {
 	files, err := proto.Parse(fileNames, includeDirs)
 	if err != nil {
-		return R{Success: false}
+		return R{Success: false, Message: err.Error()}
 	} else {
 		return R{Success: true, Data: files}
 	}

@@ -101,7 +101,7 @@ const file = () => {
 
             let serviceMap: Map<any, any[]> = new Map<any, any[]>();
             proto.methods.forEach((method, index, array) => {
-                let methods = serviceMap.get(method.serviceName);
+                let methods = serviceMap.get(method.serviceFullyName);
                 if (methods == null) {
                     methods = [];
                 }
@@ -114,7 +114,7 @@ const file = () => {
                     title: getTitle(method.name, searchValue),
                     icon: <BlockOutlined/>
                 });
-                serviceMap.set(method.serviceName, methods);
+                serviceMap.set(method.serviceFullyName, methods);
             })
 
             serviceMap.forEach((value, key, map) => {
@@ -157,8 +157,18 @@ const file = () => {
         }
     };
 
-    const onReload = () => {
-        protoStore.reloadProto()
+    const onReload = async () => {
+        debugger
+        let res = await protoStore.reloadProto()
+        if (!res.success) {
+            notification.open({
+                message: 'Error while reload protos',
+                description: res.message,
+                icon: <CloseCircleOutlined style={{color: 'red'}}/>
+            });
+            return;
+        }
+        
         message.success("Reload protos successful.")
     };
 

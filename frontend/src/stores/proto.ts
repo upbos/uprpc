@@ -61,20 +61,24 @@ export default class ProtoStore {
         if (!res.success || res.data == null || res.data.length == 0) return { success: true };
 
         res = yield ParseProto(res.data, storage.listIncludeDir());
+        if (!res.success) {
+            return res;
+        }
+
         storage.addProtos(res.data);
         this.initProto();
         return { success: true };
     }
 
     *reloadProto(): any {
+        debugger;
         let paths: string[] = [];
         storage.listProto().forEach((value) => paths.push(value.path));
         console.log("reload proto req:", paths);
         let res = yield ParseProto(paths, storage.listIncludeDir());
         console.log("reload proto :", res);
         if (!res.success) {
-            console.log("reload proto error");
-            return;
+            return res;
         }
         storage.reloadProtos(res.data);
         this.initProto();

@@ -82,6 +82,7 @@ export default class ProtoStore {
         }
         storage.reloadProtos(res.data);
         this.initProto();
+        return { success: true };
     }
 
     *deleteProto(id: string): any {

@@ -90,6 +90,11 @@ export default class ProtoStore {
         this.initProto();
     }
 
+    *clearAll(): any {
+        storage.clearAll();
+        this.initProto();
+    }
+
     *saveProto(proto: Proto, host: string, method: Method) {
         console.log("save proto method", method);
         let origProto = storage.getProto(proto.path);

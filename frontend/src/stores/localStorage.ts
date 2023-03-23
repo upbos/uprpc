@@ -94,6 +94,10 @@ export function removeProto(path: string): void {
     localStorage.setItem(PROTOS_KEY, JSON.stringify(localProtos));
 }
 
+export function clearAll(): void {
+    localStorage.removeItem(PROTOS_KEY);
+}
+
 export function listMethod(protoPath: string): Method[] {
     let proto = getProto(protoPath);
     if (proto == null) return [];

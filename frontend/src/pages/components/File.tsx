@@ -10,7 +10,8 @@ import {
     FilterOutlined,
     FolderOutlined,
     PlusCircleOutlined,
-    ReloadOutlined
+    ReloadOutlined,
+    ClearOutlined
 } from "@ant-design/icons";
 import {context} from "@/stores/context";
 import {Proto, TabType} from "@/types/types";
@@ -157,6 +158,7 @@ const file = () => {
         }
     };
 
+
     const onReload = async () => {
         debugger
         let res = await protoStore.reloadProto()
@@ -197,6 +199,17 @@ const file = () => {
             }
         });
     };
+    
+    const onClear = async () => {
+        Modal.confirm({
+            title: 'Confirm clear all proto',
+            content: 'Do you want to clear all proto configuration ?',
+            onOk: () => {
+                protoStore.clearAll();
+                setDeleteProto(undefined);
+            }
+        });
+    };
 
     let datasource = parse(protoStore.protos);
     return (
@@ -228,6 +241,10 @@ const file = () => {
                             <Tooltip title='Filter methods'>
                                 <a className={styles.operatorBtn}
                                    onClick={() => showSearchBox(!visible)}><FilterOutlined/></a>
+                            </Tooltip>
+                            <Tooltip title='Clear'>
+                                <a className={styles.operatorBtn}
+                                   onClick={() => onClear()}><ClearOutlined /></a>
                             </Tooltip>
                         </Space>
                     </Col>
